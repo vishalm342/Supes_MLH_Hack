@@ -1,6 +1,6 @@
 # Airlock backend for the browser extension
 
-The extension and the web UI share one local backend (`uvicorn backend.main:app --host 127.0.0.1 --port 8000`). The extension needs no extra server, only these endpoints. The full contract is in [`AIRLOCK_CONTEXT.md` §6.4](AIRLOCK_CONTEXT.md).
+The extension in [`extension/`](../extension/README.md) implements this flow. The extension and the web UI share one local backend (`uvicorn backend.main:app --host 127.0.0.1 --port 8000`). The extension needs no extra server, only these endpoints. The full contract is in [`AIRLOCK_CONTEXT.md` §6.4](AIRLOCK_CONTEXT.md).
 
 ## Flow (one click → Gemma → sanitized prompt)
 

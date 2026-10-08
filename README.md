@@ -34,6 +34,7 @@ Airlock is a local privacy gateway between private prompts and cloud AI. Determi
 - Stable identity mapping within a scan session.
 - Local rehydration for non-secret entities; credentials, cards, and IDs remain redacted.
 - Rules-only fallback when Gemma is unavailable.
+- Two ways in, one local backend: the web app (inspect mode, side-by-side view and timings) and a Chrome extension that adds a one-click Airlock button to ChatGPT, Claude and Gemini and restores real names in their replies on your screen.
 
 ## Innovation and Differentiation
 
@@ -102,7 +103,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed scan and ask w
 
 | Category | Technologies |
 | -------- | ------------ |
-| Frontend | Next.js, React, TypeScript, Tailwind |
+| Frontend | Next.js, React, TypeScript, Tailwind; Chrome extension (Manifest V3, plain JavaScript) |
 | Backend | FastAPI, Python |
 | Database | N/A |
 | AI / ML | Gemma 4 E2B IT via Foundry Local (local, open-weight) plus a cloud model API receiving sanitized text only |
@@ -218,7 +219,7 @@ To run without Gemma, set `GEMMA_ENABLED=false` in `.env` and restart the backen
 
 To let teammates use Rahul's backend over the LAN, start it with `--host 0.0.0.0`, add their UI origin (`http://<their-ip>:3000`) to `CORS_ORIGINS` in `.env`, and set `NEXT_PUBLIC_API_URL=http://<rahul-lan-ip>:8000` in their `frontend/.env.local`.
 
-The browser extension uses the same backend; see [`docs/EXTENSION_API.md`](docs/EXTENSION_API.md) for the endpoints and flow.
+**Browser extension:** with the backend running, open `chrome://extensions`, enable Developer mode, click **Load unpacked** and select the `extension/` folder. See [`extension/README.md`](extension/README.md) for usage and limits, and [`docs/EXTENSION_API.md`](docs/EXTENSION_API.md) for the endpoints it uses.
 
 ### Testing
 
@@ -253,7 +254,9 @@ Run `eval/run_eval.py` in A and in C to get the rules-only vs rules+Gemma compar
 
 ### Usage
 
-Open the frontend, paste a private prompt, and scan it locally. Review the entities and sanitized text, then ask safely. The cloud response is rehydrated locally where appropriate. TODO — add measured latency and evaluation results.
+Open the frontend, paste a private prompt, and scan it locally. Review the entities and sanitized text, then ask safely. The cloud response is rehydrated locally where appropriate.
+
+With the extension, write a prompt on ChatGPT, Claude or Gemini and click the **Airlock** button (or Alt+Shift+A) before sending; click **Use sanitized prompt**, then send as usual. The extension popup offers the same scan-then-ask-the-cloud flow as the web app. TODO — add measured latency and evaluation results.
 
 ## Devpost Submission
 

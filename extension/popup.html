@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Airlock</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><img src="icons/icon32.png" alt="" width="20" height="20"> Airlock</div>
+    <div id="status" class="status">Checking backend…</div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="ask">Ask safely</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <section id="tab-ask">
+    <p class="muted">Gemma 4 scans your text on this device. The cloud model only receives the sanitized version, and its answer is restored here.</p>
+    <textarea id="input" rows="6" placeholder="Paste private text, e.g. a customer email, notes or logs…"></textarea>
+    <div class="row">
+      <button id="scan" class="btn primary">1 · Scan locally (Gemma)</button>
+      <span id="scan-meta" class="muted"></span>
+    </div>
+
+    <div id="scan-result" hidden>
+      <div class="label">Found <span id="risk" class="risk"></span></div>
+      <ul id="entities"></ul>
+      <div class="label">What the cloud will see</div>
+      <div id="sanitized" class="box"></div>
+      <div class="row">
+        <button id="ask" class="btn primary">2 · Ask the cloud model</button>
+        <span id="ask-meta" class="muted"></span>
+      </div>
+    </div>
+
+    <div id="answer" hidden>
+      <div class="label">What the cloud saw</div>
+      <div id="cloud-saw" class="box"></div>
+      <div class="label">Cloud replied</div>
+      <div id="cloud-raw" class="box"></div>
+      <div class="label">What you see (restored on this device)</div>
+      <div id="restored" class="box restored"></div>
+      <div class="row">
+        <input id="followup" placeholder="Follow up, e.g. “What was the API key?”">
+        <button id="send-followup" class="btn">Send</button>
+      </div>
+    </div>
+
+    <div id="error" class="error" hidden></div>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <label class="field">Backend URL
+      <input id="backend-url" placeholder="http://127.0.0.1:8000">
+    </label>
+    <label class="check"><input type="checkbox" id="restore-in-page"> Restore real names in AI replies on ChatGPT, Claude and Gemini (on your screen only)</label>
+    <div class="row">
+      <button id="save-settings" class="btn primary">Save</button>
+      <span id="settings-meta" class="muted"></span>
+    </div>
+    <p class="muted">On ChatGPT, Claude or Gemini, write your prompt and click the purple <b>Airlock</b> button (or press Alt+Shift+A) to scan it before sending.</p>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>
