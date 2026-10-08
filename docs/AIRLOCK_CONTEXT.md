@@ -91,8 +91,6 @@ Never invent metrics. Only report numbers we actually measured.
 ├── LICENSE                  # Apache-2.0
 ├── .env.example
 ├── .gitignore
-├── main.py                  # PRE-EVENT Gradio Gemma test app (reference only, see §8)
-├── download_multimodal_models.py   # PRE-EVENT model download helper (reference only)
 ├── docs/
 │   └── AIRLOCK_CONTEXT.md   # this file
 ├── samples/
@@ -257,7 +255,7 @@ Never commit `.env`.
 
 ## 8. Pre-Event Code
 
-`main.py` and `download_multimodal_models.py` at the repo root existed before the Hack Day (a Gradio test app used to benchmark Gemma 4 on our machine). They are **reference only**: the backend may reuse their Foundry Local loading and response-extraction logic, and the README must state this honestly. All Airlock features are built during the event.
+Before the Hack Day we had a Gradio test app (`main.py`) and a model download helper used to benchmark Gemma 4 on our machine. `backend/gemma.py` reuses their Foundry Local loading and response-extraction logic, and the README states this honestly. Both files have since been removed from the repo; all Airlock features are built during the event.
 
 ## 9. Measured Gemma Facts (our machine)
 

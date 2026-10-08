@@ -1,8 +1,7 @@
 """Local Gemma 4 via Foundry Local: model lifecycle and contextual PII detection.
 
-Loading and response-extraction logic is adapted from the pre-event root
-`main.py` (Gradio test app). It is copied rather than imported because that
-module builds a Gradio UI on import.
+Loading and response-extraction logic is adapted from the team's pre-event
+Gradio test app used to benchmark Gemma 4 on our machine.
 """
 
 import json

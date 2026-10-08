@@ -76,7 +76,7 @@ Rules handle high-confidence patterns such as emails, keys, IP addresses, and ca
 
 ## Implementation During the Hackathon
 
-The team is building the Airlock scan, sanitization, cloud-question, and local rehydration flow during the Hack Day. The root `main.py` and `download_multimodal_models.py` pre-date the event as a Gemma benchmarking app; the backend reuses their model-loading logic rather than presenting that pre-event code as new work.
+The team is building the Airlock scan, sanitization, cloud-question, and local rehydration flow during the Hack Day. Before the event we had a small Gradio app for benchmarking Gemma 4 locally; `backend/gemma.py` reuses its Foundry Local model-loading logic, and that pre-event app has been removed from the repo rather than presented as new work.
 
 ### Team Contributions
 
@@ -129,35 +129,58 @@ External components remain attributed here; Airlock is a local privacy-assistanc
 ```bash
 git clone https://github.com/vishalm342/Supes_MLH_Hack.git
 cd Supes_MLH_Hack
-python -m venv .venv && .venv/Scripts/activate        # Windows; use source .venv/bin/activate on macOS/Linux
+
+# backend (Python 3.11+)
+python -m venv .venv
+.venv\Scripts\activate                 # Windows (PowerShell); use `source .venv/bin/activate` on macOS/Linux
 pip install -r backend/requirements.txt
+
+# frontend (Node.js 18.18+)
+cd frontend && npm install && cd ..
 ```
 
 ### Environment Variables
 
+The backend reads `.env` at the repo root; the frontend reads `frontend/.env.local`.
+
 ```bash
-cp .env.example .env
+cp .env.example .env                              # Windows: copy .env.example .env
+cp frontend/.env.example frontend/.env.local      # Windows: copy frontend\.env.example frontend\.env.local
 ```
 
-Configure the cloud model values in `.env`. Never commit the resulting file.
+| File | Variable | Purpose |
+|---|---|---|
+| `.env` | `CLOUD_BASE_URL`, `CLOUD_API_KEY`, `CLOUD_MODEL` | Any OpenAI-compatible `/chat/completions` endpoint. Needed for **Ask Safely**. |
+| `.env` | `GEMMA_ENABLED` | `true` loads Gemma 4 at startup (~47 s); `false` runs rules-only. |
+| `.env` | `GEMMA_MODEL_ALIAS` | Foundry Local alias, default `gemma-4-e2b-it`. |
+| `frontend/.env.local` | `NEXT_PUBLIC_API_URL` | Backend URL, default `http://localhost:8000`. |
+| `frontend/.env.local` | `NEXT_PUBLIC_USE_MOCK` | `true` uses built-in mock responses instead of the backend. |
+
+Never commit `.env` or `.env.local`.
 
 ### Running the Project
 
+Run each in its own terminal, from the repo root:
+
 ```bash
-# backend with Gemma (from repo root)
+# 1. backend — wait for "Application startup complete" (Gemma loads first when enabled)
 uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
-# backend without Gemma
-GEMMA_ENABLED=false uvicorn backend.main:app --host 0.0.0.0 --port 8000
-
-# frontend
-cd frontend && npm install && npm run dev -- -H 0.0.0.0
+# 2. frontend — then open http://localhost:3000
+cd frontend && npm run dev -- -H 0.0.0.0
 ```
 
-Teammates can point their frontend at Rahul's backend:
+To run without Gemma, set `GEMMA_ENABLED=false` in `.env` and restart the backend.
+
+Teammates can point their frontend at Rahul's backend by setting `NEXT_PUBLIC_API_URL=http://<rahul-lan-ip>:8000` in `frontend/.env.local`.
+
+### End-to-end smoke test
+
+With the backend running, this scans every sample in `samples/demo_samples.json`, sends the first one through `/ask`, and checks that no detected value reached the cloud and that redacted values never come back:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://<rahul-lan-ip>:8000
+python -m backend.smoke_test                     # add --no-cloud if no cloud key is set
+pytest backend/tests                             # rule and risk unit tests (pip install -r backend/requirements-dev.txt)
 ```
 
 ### Usage
