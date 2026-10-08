@@ -123,7 +123,7 @@ def scan(text: str) -> dict:
         for h in rule_hits
     ]
     gemma_spans = [
-        {"type": h["type"], "text": text[s:e], "start": s, "end": e, "source": "gemma"}
+        {"type": h["type"], "text": text[s:e], "start": s, "end": e, "source": "gemma", "reason": h.get("reason", "")}
         for h in gemma_hits
         for s, e in _find_occurrences(text, h["text"], h["type"])
     ]
@@ -151,10 +151,13 @@ def scan(text: str) -> dict:
                 "redacted": entity_type in REDACTED_TYPES,
                 "count": 1,
             }
+            if span.get("reason"):
+                rows[span["text"]]["reason"] = span["reason"]
         else:
             row["count"] += 1
             if span["source"] == "rule":
                 row["source"] = "rule"
+                row.pop("reason", None)
 
     entities = list(rows.values())
 
