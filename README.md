@@ -10,8 +10,8 @@
 | ------ | ------------ |
 | Rahul R R | Gemma 4 integration, backend pipeline, and cloud model client |
 | Harish B | Repository setup, documentation, demo samples, and evaluation data |
-| Vishal M | Frontend experience and integration |
-| Name TBD (Teammate A) | Deterministic rules, risk scoring, and tests |
+| Dharun Kumar | Frontend experience and integration |
+|  Vishal M | Deterministic rules, risk scoring, and tests |
 
 ## Problem Statement
 
@@ -277,7 +277,7 @@ Apache License 2.0. See [LICENSE](./LICENSE).
 ## Submission Checklist
 
 - [x] Project title and description added
-- [ ] Confirm and list every team member by name
+- [x] Confirm and list every team member by name
 - [x] Problem clearly explained
 - [x] Reason for choosing the problem explained
 - [x] Solution and key features documented
@@ -286,14 +286,14 @@ Apache License 2.0. See [LICENSE](./LICENSE).
 - [x] Technical implementation documented
 - [x] Work completed during the hackathon documented
 - [x] Team contributions documented
-- [ ] Working application is functional
-- [ ] Live application link added where applicable
-- [ ] Demo video added
+- [x] Working application is functional
+- [x] Live application link added where applicable
+- [x] Demo video added
 - [x] AI and open-source components documented
-- [ ] Setup and usage instructions tested
-- [ ] Challenges and learnings documented
-- [ ] Devpost submission completed
-- [ ] Devpost link added
+- [x] Setup and usage instructions tested
+- [x] Challenges and learnings documented
+- [x] Devpost submission completed
+- [x] Devpost link added
 - [x] Credits added
 - [x] License added
 - [x] Repository is organized and complete
