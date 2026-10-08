@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Airlock — Local AI Privacy",
+  "version": "0.1.0",
+  "description": "Scan editable text with the local Airlock privacy gateway.",
+  "host_permissions": ["<all_urls>", "http://localhost:8000/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_title": "Scan with Airlock"},
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"],
+    "css": ["content.css"],
+    "run_at": "document_idle"
+  }]
+}
