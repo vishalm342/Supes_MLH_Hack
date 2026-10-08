@@ -19,12 +19,15 @@ export class ApiError extends Error {
 
 function describeStatus(status: number, detail: string): string {
   switch (status) {
+    case 400:
+    case 413:
+      return detail || `The backend rejected the request (${status}).`;
     case 404:
       return "The backend doesn't know this scan anymore (it may have restarted). Scan the text again.";
     case 502:
       return `The cloud model returned an error${detail ? `: ${detail}` : "."}`;
     case 503:
-      return `The backend isn't ready${detail ? `: ${detail}` : "."}`;
+      return detail || "The backend isn't ready yet. Try again shortly.";
     default:
       return `Backend error ${status}${detail ? `: ${detail}` : ""}`;
   }
