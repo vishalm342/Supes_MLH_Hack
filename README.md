@@ -11,7 +11,7 @@
 | Rahul R R | Gemma 4 integration, backend pipeline, and cloud model client |
 | Harish B | Repository setup, documentation, demo samples, and evaluation data |
 | Vishal M | Frontend experience and integration |
-| Teammate A | Deterministic rules, risk scoring, and tests |
+| Name TBD (Teammate A) | Deterministic rules, risk scoring, and tests |
 
 ## Problem Statement
 
@@ -43,17 +43,60 @@ Airlock uses a small open-weight model as a local gatekeeper rather than sending
 
 ### Architecture
 
-```mermaid
-flowchart LR
-    A[Input] --> B[Rules]
-    A --> C[Gemma 4 local]
-    B --> D[Merge and risk score]
-    C --> D
-    D --> E[Pseudonymize]
-    E --> F[Cloud model]
-    F --> G[Rehydrate locally]
-    G --> H[User]
+```text
+     USER / BROWSER
+          |
+          | private prompt
+          v
+     +------------------+
+     | Next.js frontend |
+     +--------+---------+
+              | POST /scan {text}
+              v
+     +---------- AIRLOCK BACKEND (LOCAL MACHINE) ----------+
+     |                                                      |
+     |  FastAPI /scan                                      |
+     |       |                                              |
+     |       +-----> Rules: regex, entropy, Luhn --\
+     |                                               +----> Merge, dedupe, risk
+     |       +-----> Gemma 4 E2B IT (local) --------/
+     |                                                      |
+     |                                                      v
+     |                                                   Pseudonymize values
+     |                                                             |
+     |                                       Keep placeholder map in session
+     +----------------------+-------------------------------+
+                            |
+          scan_id + sanitized text + entities + risk
+                            v
+     +------------------+
+     | Next.js frontend |
+     +--------+---------+
+              | user selects “Ask Safely”
+              | POST /ask {scan_id, question?}
+              v
+     +---------- AIRLOCK BACKEND (LOCAL MACHINE) ----------+
+     | Retrieve scan session; sanitize follow-up question. |
+     | Check that redacted secrets are absent.             |
+     +----------------------+-------------------------------+
+                            | sanitized conversation only
+                            v
+                    +---------------+
+                    | Cloud model   |
+                    | API           |
+                    +-------+-------+
+                            | answer with placeholders
+                            v
+     +---------- AIRLOCK BACKEND (LOCAL MACHINE) ----------+
+     | Rehydrate eligible values with the local map.       |
+     | Secrets remain placeholders.                        |
+     +----------------------+-------------------------------+
+                            | answer
+                            v
+                     USER SEES ANSWER
 ```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed scan and ask workflows.
 
 ### Technology Stack
 
@@ -76,14 +119,14 @@ Rules handle high-confidence patterns such as emails, keys, IP addresses, and ca
 
 ## Implementation During the Hackathon
 
-The team is building the Airlock scan, sanitization, cloud-question, and local rehydration flow during the Hack Day. Before the event we had a small Gradio app for benchmarking Gemma 4 locally; `backend/gemma.py` reuses its Foundry Local model-loading logic, and that pre-event app has been removed from the repo rather than presented as new work.
+During the Hack Day, the team built the Airlock scan, sanitization, cloud-question, and local rehydration flow. Before the event, the team had a small Gradio app for benchmarking Gemma 4 locally; `backend/gemma.py` reuses its Foundry Local model-loading logic, and the pre-event app has been removed from the repo rather than presented as new work.
 
 ### Team Contributions
 
 - **Rahul R R:** Gemma 4 integration, backend pipeline, and cloud model client.
 - **Harish B:** Repository setup, documentation, demo samples, and evaluation data.
 - **Vishal M:** Frontend experience and integration.
-- **Teammate A:** Deterministic rules, risk scoring, and tests.
+- **Name TBD (Teammate A):** Deterministic rules, risk scoring, and tests.
 
 ### Challenges and Learnings
 
@@ -106,7 +149,7 @@ The planned demonstration scans the customer escalation sample offline, shows ty
 ### AI / Models
 
 - **Gemma 4 E2B IT:** Apache 2.0, Google. Runs locally through Foundry Local to detect context-sensitive private entities before any cloud request.
-- **Cloud model:** Receives sanitized text and typed placeholders; missed detections can still expose sensitive content, so Airlock does not guarantee complete protection.
+- **Cloud model:** Receives sanitized text with typed placeholders. Missed detections can still expose sensitive content, so Airlock does not guarantee complete protection.
 
 ### Open Source Components
 
@@ -228,7 +271,7 @@ Apache License 2.0. See [LICENSE](./LICENSE).
 ## Submission Checklist
 
 - [x] Project title and description added
-- [x] All currently known team members listed
+- [ ] Confirm and list every team member by name
 - [x] Problem clearly explained
 - [x] Reason for choosing the problem explained
 - [x] Solution and key features documented

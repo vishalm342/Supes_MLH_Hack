@@ -19,3 +19,4 @@ node_modules/
 *.db
 *.log
 .DS_Store
+/hacktoberfest-hack-day-coimbatore-x-init-club-and-idea-club-main/
