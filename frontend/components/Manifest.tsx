@@ -10,80 +10,79 @@ export function Manifest({ scan }: { scan: ScanResponse }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-end justify-between rounded-xl bg-slate-900/80 px-4 py-3 ring-1 ring-slate-700/70">
+      <div className="flex items-end justify-between rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-200">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Risk</p>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-500">Risk</p>
           <RiskBadge risk={scan.risk} size="lg" />
         </div>
         <div className="text-right">
-          <p className="text-3xl font-black leading-none text-white">{entities.length}</p>
-          <p className="mt-1 text-xs text-slate-400">held back</p>
+          <p className="font-display text-[2.6rem] leading-none tracking-tight text-stone-950 tabular-nums">
+            {entities.length}
+          </p>
+          <p className="mt-1 text-xs text-stone-500">held back</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center">
-        <div className="rounded-lg bg-slate-800/50 px-2 py-2 ring-1 ring-slate-700/60">
-          <p className="text-lg font-bold text-slate-100">{ruleCount}</p>
-          <p className="text-[11px] text-slate-400">caught by rules</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-stone-200">
+          <p className="font-display text-2xl leading-none text-stone-900 tabular-nums">{ruleCount}</p>
+          <p className="mt-1 text-xs text-stone-500">caught by rules</p>
         </div>
-        <div className="rounded-lg bg-violet-500/15 px-2 py-2 ring-1 ring-violet-400/60 shadow-[0_0_18px_-6px_rgba(167,139,250,0.8)]">
-          <p className="flex items-center justify-center gap-1 text-lg font-bold text-violet-100">
-            <SparkleIcon className="h-4 w-4" />
+        <div className="rounded-xl bg-blue-50 px-3 py-2.5 ring-1 ring-blue-200">
+          <p className="flex items-center gap-1.5 font-display text-2xl leading-none text-blue-700 tabular-nums">
             {gemmaCount}
+            <SparkleIcon className="h-4 w-4" />
           </p>
-          <p className="text-[11px] text-violet-200">only Gemma caught</p>
+          <p className="mt-1 text-xs font-medium text-blue-700">only Gemma caught</p>
         </div>
       </div>
 
       {!scan.gemma_used && (
-        <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/40">
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-amber-200">
           Gemma wasn&apos;t available for this scan — rule results only. Contextual items may be missed.
         </p>
       )}
 
       {entities.length === 0 ? (
-        <p className="rounded-lg bg-slate-800/50 p-3 text-sm text-slate-300">Nothing sensitive found.</p>
+        <p className="rounded-xl bg-white p-3 text-sm text-stone-600 ring-1 ring-stone-200">Nothing sensitive found.</p>
       ) : (
-        <ul className="max-h-[19rem] space-y-1.5 overflow-y-auto pr-1 pb-8 [mask-image:linear-gradient(to_bottom,black_88%,transparent)]">
-          {entities.map((e) => {
-            const gemma = e.source === "gemma";
-            return (
-              <li
-                key={e.text}
-                className={`rounded-lg px-3 py-2 ring-1 ${
-                  gemma ? "bg-violet-500/10 ring-violet-400/50" : "bg-slate-800/40 ring-slate-700/60"
-                }`}
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-sm font-semibold text-slate-100" title={e.text}>
-                    {e.text}
+        <ul className="max-h-[19rem] space-y-1.5 overflow-y-auto pb-8 pr-1 [mask-image:linear-gradient(to_bottom,black_86%,transparent)]">
+          {entities.map((e) => (
+            <li
+              key={e.text}
+              className={`rounded-lg bg-white px-3 py-2.5 ring-1 ${
+                e.source === "gemma" ? "shadow-[inset_2px_0_0_0_#2563eb] ring-blue-200" : "ring-stone-200"
+              }`}
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="truncate text-sm font-medium text-stone-900" title={e.text}>
+                  {e.text}
+                </span>
+                <span className={`shrink-0 font-mono text-[11px] ${e.redacted ? "text-red-600" : "text-stone-500"}`}>
+                  {e.replacement}
+                  {e.count > 1 && <span className="ml-1 text-stone-400">×{e.count}</span>}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <SourceBadge source={e.source} />
+                <RiskBadge risk={e.risk} />
+                {e.redacted && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600">
+                    <LockIcon className="h-3 w-3" /> never restored
                   </span>
-                  <span className={`shrink-0 font-mono text-xs ${e.redacted ? "text-rose-300" : "text-sky-300"}`}>
-                    {e.replacement}
-                    {e.count > 1 && <span className="ml-1 text-slate-500">×{e.count}</span>}
-                  </span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <SourceBadge source={e.source} />
-                  <RiskBadge risk={e.risk} />
-                  {e.redacted && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-300">
-                      <LockIcon className="h-3 w-3" /> never restored
-                    </span>
-                  )}
-                </div>
-                {e.reason && <p className="mt-1 text-xs leading-snug text-violet-200/80">{e.reason}</p>}
-              </li>
-            );
-          })}
+                )}
+              </div>
+              {e.reason && <p className="mt-1.5 text-xs leading-snug text-stone-500">{e.reason}</p>}
+            </li>
+          ))}
         </ul>
       )}
 
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-        <span className="inline-flex items-center gap-1 font-semibold text-emerald-400">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-stone-500 tabular-nums">
+        <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
           <CheckIcon className="h-3 w-3" /> Processed locally
         </span>
-        {t.rules != null && <span>rules {t.rules} ms</span>}
+        {t.rules != null && <span>· rules {t.rules} ms</span>}
         {scan.gemma_used && t.gemma != null && <span>· Gemma {t.gemma} ms</span>}
       </p>
     </div>

@@ -15,6 +15,11 @@ import type { ScanResponse } from "@/lib/types";
 const HEALTH_POLL_MS = 10_000;
 const FOLLOW_UPS = ["What was the API key?", "Make it shorter and friendlier."];
 
+const PRIMARY_BUTTON =
+  "inline-flex items-center gap-2 rounded-xl bg-stone-900 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-40";
+const SECONDARY_BUTTON =
+  "inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-sm font-medium text-stone-700 shadow-sm ring-1 ring-stone-200 transition hover:bg-stone-50 hover:text-stone-900 disabled:opacity-40";
+
 function useElapsedSeconds(running: boolean): number {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -55,13 +60,17 @@ export default function Home() {
   const api = getApi(useMock);
 
   // ?mock=1 / ?mock=0 overrides the env default, handy on the demo machine.
+  // Health polling waits for this so ?mock=1 never pings the real backend first.
+  const [modeReady, setModeReady] = useState(false);
   useEffect(() => {
     const flag = new URLSearchParams(window.location.search).get("mock");
     if (flag === "1" || flag === "true") setUseMock(true);
     if (flag === "0" || flag === "false") setUseMock(false);
+    setModeReady(true);
   }, []);
 
   useEffect(() => {
+    if (!modeReady) return;
     let cancelled = false;
     const check = () =>
       getApi(useMock)
@@ -75,7 +84,7 @@ export default function Home() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [useMock]);
+  }, [useMock, modeReady]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -150,13 +159,14 @@ export default function Home() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <Header step={step} health={health} useMock={useMock} onToggleMock={() => setUseMock((m) => !m)} apiUrl={API_URL} />
+      <Header step={step} health={health} useMock={useMock} onMockChange={setUseMock} apiUrl={API_URL} />
 
       {health.status === "down" && !useMock && (
-        <div className="border-b border-rose-900/60 bg-rose-950/40 px-6 py-2">
+        <div className="border-b border-red-200 bg-red-50 px-6 py-2">
           <ErrorBanner
-            title="Can't reach the Airlock backend"
-            message={`${health.error} You can switch to mock data to keep going.`}
+            inline
+            title="Backend unreachable"
+            message={`${health.error} Switch to mock data to keep going.`}
             action={{ label: "Use mock data", onClick: () => setUseMock(true) }}
           />
         </div>
@@ -172,7 +182,8 @@ export default function Home() {
             scanning={scanning}
             notice={
               gemmaLoading && (
-                <p className="rounded-lg bg-sky-500/10 px-4 py-2.5 text-sm text-sky-200 ring-1 ring-sky-500/40">
+                <p className="flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-sm text-stone-600 shadow-sm ring-1 ring-stone-200">
+                  <Spinner className="h-3.5 w-3.5 text-stone-500" />
                   Gemma is still loading on the backend (about a minute after startup). Scans will work once it&apos;s
                   ready.
                 </p>
@@ -199,36 +210,36 @@ export default function Home() {
       </main>
 
       {view === "workspace" && (
-        <footer className="border-t border-slate-800 bg-[#07090f]/95 backdrop-blur">
+        <footer className="border-t border-stone-200 bg-paper/95 backdrop-blur">
           <div className="flex flex-wrap items-center gap-3 px-6 py-3">
             <button
               type="button"
               onClick={backToCompose}
               disabled={scanning || asking}
-              className="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-300 ring-1 ring-slate-700 transition hover:bg-slate-800 disabled:opacity-40"
+              className={SECONDARY_BUTTON}
             >
               {turns.length > 0 ? <RefreshIcon /> : <ArrowLeftIcon />}
               {turns.length > 0 ? "New scan" : "Edit text"}
             </button>
 
             {scanning && (
-              <p className="flex items-center gap-2 text-sm text-violet-200">
+              <p className="flex items-center gap-2 text-sm text-stone-600">
                 <Spinner className="h-3.5 w-3.5" /> Scanning locally — nothing leaves this device.
               </p>
             )}
 
             {scan && turns.length === 0 && (
               <>
-                <p className="ml-auto hidden text-sm text-slate-400 md:block">
-                  Only the <span className="font-semibold text-sky-300">right-hand lane</span> will be sent.
+                <p className="ml-auto hidden text-sm text-stone-500 md:block">
+                  Only the <span className="font-medium text-stone-900">cloud lane</span> will be sent.
                 </p>
                 <button
                   type="button"
                   onClick={() => runAsk()}
                   disabled={asking}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-emerald-900/50 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 max-md:ml-auto"
+                  className={`${PRIMARY_BUTTON} px-5 max-md:ml-auto`}
                 >
-                  {asking ? <Spinner /> : <CloudIcon className="h-5 w-5" />}
+                  {asking ? <Spinner /> : <CloudIcon className="h-4.5 w-4.5" />}
                   {asking ? "Asking the cloud…" : "Ask the cloud safely"}
                   {!asking && <ArrowRightIcon />}
                 </button>
@@ -249,7 +260,7 @@ export default function Home() {
                     type="button"
                     onClick={() => runAsk(q)}
                     disabled={asking}
-                    className="rounded-full bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-200 ring-1 ring-slate-700 transition hover:bg-slate-700 disabled:opacity-50"
+                    className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-stone-700 ring-1 ring-stone-200 transition hover:text-stone-900 hover:ring-stone-300 disabled:opacity-50"
                   >
                     {q}
                   </button>
@@ -259,13 +270,9 @@ export default function Home() {
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ask a follow-up — same placeholders, same session"
                   aria-label="Follow-up question"
-                  className="min-w-56 flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-[15px] text-slate-100 ring-1 ring-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="min-w-56 flex-1 rounded-xl bg-white px-4 py-2.5 text-[15px] text-stone-900 shadow-sm ring-1 ring-stone-200 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900"
                 />
-                <button
-                  type="submit"
-                  disabled={asking || !question.trim()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <button type="submit" disabled={asking || !question.trim()} className={`${PRIMARY_BUTTON} px-4`}>
                   {asking ? <Spinner /> : <SendIcon />}
                   Send
                 </button>

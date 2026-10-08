@@ -8,7 +8,7 @@ function Svg({ className = "h-4 w-4", children }: IconProps & { children: React.
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -19,23 +19,36 @@ function Svg({ className = "h-4 w-4", children }: IconProps & { children: React.
   );
 }
 
-export const ShieldIcon = (p: IconProps) => (
+// Brand mark: a placeholder token, [•]. Keep in sync with app/icon.svg.
+export function LogoMark({ className = "h-7 w-7" }: IconProps) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden className={className}>
+      <rect width="32" height="32" rx="8" fill="#0C0A09" />
+      <path d="M12.5 9.5H9.5V22.5H12.5" stroke="#FAFAF9" strokeWidth={2.25} />
+      <path d="M19.5 9.5H22.5V22.5H19.5" stroke="#FAFAF9" strokeWidth={2.25} />
+      <circle cx="16" cy="16" r="2.25" fill="#FAFAF9" />
+    </svg>
+  );
+}
+
+export const BracketsIcon = (p: IconProps) => (
   <Svg {...p}>
-    <path d="M12 2.5 4.5 5.5v6c0 4.6 3.1 8.7 7.5 10 4.4-1.3 7.5-5.4 7.5-10v-6z" />
+    <path d="M9 5H6v14h3M15 5h3v14h-3" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
   </Svg>
 );
 
 export const ShieldCheckIcon = (p: IconProps) => (
   <Svg {...p}>
-    <path d="M12 2.5 4.5 5.5v6c0 4.6 3.1 8.7 7.5 10 4.4-1.3 7.5-5.4 7.5-10v-6z" />
-    <path d="m8.5 12 2.5 2.5 4.5-5" />
+    <path d="M12 2.75 4.75 5.6v5.9c0 4.5 3 8.5 7.25 9.75 4.25-1.25 7.25-5.25 7.25-9.75V5.6z" />
+    <path d="m9 12 2.2 2.2L15.5 10" />
   </Svg>
 );
 
 export const LockIcon = (p: IconProps) => (
   <Svg {...p}>
-    <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
-    <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+    <rect x="4.75" y="10.75" width="14.5" height="9.5" rx="2" />
+    <path d="M8.25 10.75V7.5a3.75 3.75 0 0 1 7.5 0v3.25" />
   </Svg>
 );
 
@@ -79,5 +92,12 @@ export const SendIcon = (p: IconProps) => (
 export const RefreshIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M20 11.5A8 8 0 0 0 6.3 6.3L4 8.5M4 4v4.5h4.5M4 12.5a8 8 0 0 0 13.7 5.2L20 15.5M20 20v-4.5h-4.5" />
+  </Svg>
+);
+
+export const AlertIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.75v5M12 16.25h.01" />
   </Svg>
 );

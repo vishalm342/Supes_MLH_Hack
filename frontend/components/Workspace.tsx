@@ -1,8 +1,8 @@
 import { Fragment } from "react";
 import { Spinner } from "./Badges";
 import { ErrorBanner, type ErrorInfo } from "./ErrorBanner";
-import { HighlightedText } from "./HighlightedText";
-import { ArrowLeftIcon, ArrowRightIcon, CloudIcon, LockIcon, ShieldIcon } from "./Icons";
+import { HighlightedText, MARK } from "./HighlightedText";
+import { ArrowLeftIcon, ArrowRightIcon, BracketsIcon, CloudIcon, LockIcon, ShieldCheckIcon } from "./Icons";
 import { Manifest } from "./Manifest";
 import type { AskResponse, Entity, ScanResponse } from "@/lib/types";
 
@@ -13,35 +13,40 @@ export interface Turn {
 
 // ---------- layout ----------
 
-// One row across the three lanes: device | airlock | cloud. Lanes have no gap so their
-// tints and the airlock's dashed walls run continuously down the page.
+const GATE_WALLS = "lg:border-x lg:border-dashed lg:border-stone-300";
+
+// One row across the three lanes: device | airlock | cloud. Lanes have no gap so the
+// airlock's tint and dashed walls run continuously down the page.
 function Row({ device, gate, cloud }: { device?: React.ReactNode; gate?: React.ReactNode; cloud?: React.ReactNode }) {
   return (
     <>
-      <div className="bg-violet-500/[0.03] px-6 py-4">{device}</div>
-      <div className="bg-slate-950/50 px-4 py-4 lg:border-x lg:border-dashed lg:border-slate-700/80">{gate}</div>
-      <div className="bg-sky-500/[0.03] px-6 py-4">{cloud}</div>
+      <div className="px-6 py-4">{device}</div>
+      <div className={`bg-stone-100/70 px-4 py-4 ${GATE_WALLS}`}>{gate}</div>
+      <div className="px-6 py-4">{cloud}</div>
     </>
   );
 }
 
 function LaneHeads({ cloudModel }: { cloudModel?: string }) {
-  const head = "sticky top-0 z-10 flex items-center gap-2 border-b border-slate-800 bg-[#07090f]/95 py-3 backdrop-blur";
+  const head = "sticky top-0 z-10 flex items-center gap-2 border-b border-stone-200 py-3 backdrop-blur";
+  const title = "text-[13px] font-semibold text-stone-900";
   return (
     <>
-      <div className={`${head} px-6 text-violet-300`}>
-        <LockIcon className="h-4 w-4" />
-        <span className="text-sm font-bold uppercase tracking-wider">On your device</span>
-        <span className="text-xs font-normal text-slate-500">· private</span>
+      <div className={`${head} bg-paper/90 px-6`}>
+        <LockIcon className="h-4 w-4 text-stone-500" />
+        <span className={title}>On this device</span>
+        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+          Private
+        </span>
       </div>
-      <div className={`${head} justify-center px-4 text-slate-200 lg:border-x lg:border-dashed lg:border-slate-700/80`}>
-        <ShieldIcon className="h-4 w-4 text-violet-400" />
-        <span className="text-sm font-bold uppercase tracking-wider">Airlock</span>
+      <div className={`${head} justify-center bg-stone-100/90 px-4 ${GATE_WALLS}`}>
+        <BracketsIcon className="h-4 w-4 text-stone-500" />
+        <span className={title}>Airlock</span>
       </div>
-      <div className={`${head} px-6 text-sky-300`}>
-        <CloudIcon className="h-4 w-4" />
-        <span className="text-sm font-bold uppercase tracking-wider">Cloud model</span>
-        <span className="truncate text-xs font-normal text-slate-500">· {cloudModel ?? "sees placeholders only"}</span>
+      <div className={`${head} bg-paper/90 px-6`}>
+        <CloudIcon className="h-4 w-4 text-stone-500" />
+        <span className={title}>Cloud model</span>
+        <span className="truncate text-xs text-stone-400">{cloudModel ?? "sees placeholders only"}</span>
       </div>
     </>
   );
@@ -49,42 +54,56 @@ function LaneHeads({ cloudModel }: { cloudModel?: string }) {
 
 // ---------- building blocks ----------
 
-type Tone = "device" | "cloud" | "restored";
-
-const TONES: Record<Tone, { ring: string; label: string }> = {
-  device: { ring: "ring-violet-500/30", label: "text-violet-300" },
-  cloud: { ring: "ring-sky-500/30", label: "text-sky-300" },
-  restored: { ring: "ring-emerald-500/50 shadow-[0_0_24px_-10px_rgba(52,211,153,0.6)]", label: "text-emerald-300" },
-};
-
-function Bubble({
-  tone,
+function Card({
   label,
   meta,
+  restored = false,
   className = "",
   children,
 }: {
-  tone: Tone;
   label: string;
   meta?: string;
+  restored?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-2xl bg-slate-900/85 p-4 ring-1 ${TONES[tone].ring} ${className}`}>
+    <div
+      className={`rounded-xl bg-white p-4 shadow-[0_1px_2px_rgba(12,10,9,0.04)] ring-1 ${
+        restored ? "ring-emerald-300" : "ring-stone-200"
+      } ${className}`}
+    >
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <p className={`text-[11px] font-bold uppercase tracking-wider ${TONES[tone].label}`}>{label}</p>
-        {meta && <p className="truncate text-[11px] text-slate-500">{meta}</p>}
+        <p
+          className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${
+            restored ? "text-emerald-700" : "text-stone-500"
+          }`}
+        >
+          {label}
+        </p>
+        {meta && <p className="truncate text-[11px] text-stone-400 tabular-nums">{meta}</p>}
       </div>
-      <div className="text-[15px] leading-relaxed text-slate-100">{children}</div>
+      <div className="text-[15px] leading-[1.7] text-stone-800">{children}</div>
     </div>
+  );
+}
+
+function Legend({ items }: { items: [string, string][] }) {
+  return (
+    <p className="mt-2 flex gap-4 px-1 text-xs text-stone-500">
+      {items.map(([swatch, label]) => (
+        <span key={label} className="flex items-center gap-1.5">
+          <span className={`h-3 w-3 rounded-[3px] ${swatch}`} /> {label}
+        </span>
+      ))}
+    </p>
   );
 }
 
 function Sealed({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-full min-h-28 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-700/80 p-4 text-center text-sm text-slate-500">
-      <LockIcon className="h-5 w-5 text-slate-600" />
+    <div className="flex h-full min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 p-4 text-center text-sm text-stone-400">
+      <LockIcon className="h-5 w-5" />
       {children}
     </div>
   );
@@ -92,13 +111,13 @@ function Sealed({ children }: { children: React.ReactNode }) {
 
 function Typing({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-slate-900/70 p-4 ring-1 ring-sky-500/20">
+    <div className="flex items-center gap-3 rounded-xl bg-white p-4 ring-1 ring-stone-200">
       <span className="flex gap-1">
         {[0, 1, 2].map((i) => (
-          <span key={i} className="typing-dot h-2 w-2 rounded-full bg-sky-300" style={{ animationDelay: `${i * 0.15}s` }} />
+          <span key={i} className="typing-dot h-1.5 w-1.5 rounded-full bg-stone-500" style={{ animationDelay: `${i * 0.15}s` }} />
         ))}
       </span>
-      <span className="text-sm text-slate-400">{label}</span>
+      <span className="text-sm text-stone-500">{label}</span>
     </div>
   );
 }
@@ -114,22 +133,22 @@ function Connector({
   detail?: string;
   busy?: boolean;
 }) {
-  const out = direction === "out";
+  const back = direction === "back";
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
       <div className="flex w-full items-center gap-2">
-        <span className={`h-px flex-1 ${out ? "bg-violet-400/40" : "bg-emerald-400/40"}`} />
+        <span className="h-px flex-1 bg-stone-300" />
         <span
-          className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 ${
-            out ? "bg-sky-500/15 text-sky-300 ring-sky-400/50" : "bg-emerald-500/15 text-emerald-300 ring-emerald-400/50"
+          className={`flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ${
+            back ? "text-emerald-700 ring-emerald-200" : "text-stone-700 ring-stone-300"
           }`}
         >
-          {busy ? <Spinner /> : out ? <ArrowRightIcon /> : <ArrowLeftIcon />}
+          {busy ? <Spinner className="h-3.5 w-3.5" /> : back ? <ArrowLeftIcon /> : <ArrowRightIcon />}
         </span>
-        <span className={`h-px flex-1 ${out ? "bg-sky-400/40" : "bg-emerald-400/40"}`} />
+        <span className="h-px flex-1 bg-stone-300" />
       </div>
-      <p className="text-sm font-semibold text-slate-200">{title}</p>
-      {detail && <p className="text-xs text-slate-500">{detail}</p>}
+      <p className="text-[13px] font-medium text-stone-800">{title}</p>
+      {detail && <p className="text-xs text-stone-500">{detail}</p>}
     </div>
   );
 }
@@ -137,14 +156,22 @@ function Connector({
 function ScanningGate({ seconds, withGemma }: { seconds: number; withGemma: boolean }) {
   return (
     <div className="flex flex-col items-center gap-3 py-8 text-center">
-      <div className="relative flex h-16 w-16 items-center justify-center">
-        <span className="absolute inset-0 animate-spin rounded-full border-2 border-violet-500/20 border-t-violet-400" />
-        <ShieldIcon className="h-7 w-7 animate-pulse text-violet-300" />
+      <div className="relative flex h-14 w-14 items-center justify-center">
+        <span className="absolute inset-0 animate-spin rounded-full border-2 border-stone-200 border-t-stone-900" />
+        <ShieldCheckIcon className="h-6 w-6 text-stone-900" />
       </div>
-      <p className="text-base font-semibold text-violet-100">
-        Scanning on this device{withGemma ? " with Gemma 4" : " (rules only)"}…
+      <p className="text-[15px] font-medium text-stone-900">
+        Scanning on this device
+        {withGemma ? (
+          <>
+            {" "}
+            with <span className="text-blue-700">Gemma 4</span>…
+          </>
+        ) : (
+          " (rules only)…"
+        )}
       </p>
-      <p className="text-sm text-slate-400">{seconds}s · nothing has left this machine</p>
+      <p className="text-sm text-stone-500 tabular-nums">{seconds}s · nothing has left this machine</p>
     </div>
   );
 }
@@ -194,22 +221,20 @@ export function Workspace({
       <Row
         device={
           <div>
-            <Bubble tone="device" label="Your text" className={scanning ? "scan-sweep" : ""}>
+            <Card label="Your text" className={scanning ? "scan-sweep" : ""}>
               {scan ? (
                 <HighlightedText text={text} entities={entities} mode="original" />
               ) : (
                 <p className="whitespace-pre-wrap break-words">{text}</p>
               )}
-            </Bubble>
+            </Card>
             {scan && (
-              <p className="mt-2 flex gap-4 px-1 text-xs text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-amber-400/70" /> Rule
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-violet-400" /> Gemma (local AI)
-                </span>
-              </p>
+              <Legend
+                items={[
+                  [MARK.rule, "Caught by a rule"],
+                  [MARK.gemma, "Caught by Gemma"],
+                ]}
+              />
             )}
           </div>
         }
@@ -225,17 +250,15 @@ export function Workspace({
         cloud={
           scan ? (
             <div>
-              <Bubble tone="cloud" label={sent ? "Sent to the cloud" : "Ready to send"}>
+              <Card label={sent ? "Sent to the cloud" : "Ready to send"}>
                 <HighlightedText text={scan.sanitized_text} entities={entities} mode="sanitized" />
-              </Bubble>
-              <p className="mt-2 flex gap-4 px-1 text-xs text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-sky-400/70" /> Restored later
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-rose-400/80" /> Never restored
-                </span>
-              </p>
+              </Card>
+              <Legend
+                items={[
+                  [MARK.placeholder, "Restored later"],
+                  [MARK.redacted, "Never restored"],
+                ]}
+              />
             </div>
           ) : (
             <Sealed>Nothing has left this device.</Sealed>
@@ -248,33 +271,32 @@ export function Workspace({
           {turn.question && (
             <Row
               device={
-                <Bubble tone="device" label="You asked">
+                <Card label="You asked">
                   <p className="whitespace-pre-wrap break-words">{turn.question}</p>
-                </Bubble>
+                </Card>
               }
               gate={<Connector direction="out" title="Sanitized" detail="Same placeholders as before" />}
               cloud={
-                <Bubble tone="cloud" label="Sent to the cloud">
+                <Card label="Sent to the cloud">
                   <HighlightedText text={turn.answer.cloud_saw} entities={entities} mode="sanitized" />
-                </Bubble>
+                </Card>
               }
             />
           )}
           <Row
             device={
-              <Bubble tone="restored" label="What you see · restored here">
+              <Card label="What you see · restored here" restored>
                 <HighlightedText text={turn.answer.response} entities={entities} mode="response" />
-              </Bubble>
+              </Card>
             }
             gate={<Connector direction="back" title="Restored locally" detail={restoredSummary(turn.answer, entities)} />}
             cloud={
-              <Bubble
-                tone="cloud"
+              <Card
                 label="Cloud replied"
                 meta={turn.answer.timings_ms.cloud != null ? `${turn.answer.timings_ms.cloud} ms` : undefined}
               >
                 <HighlightedText text={turn.answer.cloud_response_raw} entities={entities} mode="sanitized" />
-              </Bubble>
+              </Card>
             }
           />
         </Fragment>
@@ -284,15 +306,15 @@ export function Workspace({
         <Row
           device={
             pendingQuestion ? (
-              <Bubble tone="device" label="You asked">
+              <Card label="You asked">
                 <p className="whitespace-pre-wrap break-words">{pendingQuestion}</p>
-              </Bubble>
+              </Card>
             ) : (
               <Sealed>The answer will be restored here.</Sealed>
             )
           }
           gate={<Connector direction="out" title="Sending placeholders only" busy />}
-          cloud={<Typing label="Cloud model is answering…" />}
+          cloud={<Typing label="The cloud model is answering…" />}
         />
       )}
 

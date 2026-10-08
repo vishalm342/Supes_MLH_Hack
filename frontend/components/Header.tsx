@@ -1,30 +1,26 @@
-import { CheckIcon, ShieldIcon } from "./Icons";
+import { CheckIcon, LogoMark } from "./Icons";
 import { StatusPill, type HealthState } from "./StatusPill";
 
 const STEPS = ["Paste", "Scan locally", "Ask safely"];
 
 function Stepper({ step }: { step: number }) {
   return (
-    <ol className="hidden items-center gap-1 md:flex">
+    <ol className="hidden items-center md:flex">
       {STEPS.map((label, i) => {
         const n = i + 1;
         const done = n < step;
         const current = n === step;
         return (
-          <li key={label} className="flex items-center gap-1">
-            {i > 0 && <span aria-hidden className={`h-px w-6 ${done || current ? "bg-violet-400/60" : "bg-slate-700"}`} />}
+          <li key={label} className="flex items-center">
+            {i > 0 && <span aria-hidden className={`mx-2 h-px w-8 ${done || current ? "bg-stone-400" : "bg-stone-200"}`} />}
             <span
-              className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition ${
-                current
-                  ? "bg-violet-500/20 text-violet-100 ring-1 ring-violet-400/60"
-                  : done
-                    ? "text-violet-300"
-                    : "text-slate-500"
+              className={`flex items-center gap-2 text-[13px] font-medium ${
+                current ? "text-stone-900" : done ? "text-stone-600" : "text-stone-400"
               }`}
             >
               <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                  done ? "bg-violet-500 text-white" : current ? "bg-violet-400 text-slate-950" : "bg-slate-800 text-slate-400"
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${
+                  done || current ? "bg-stone-900 text-white" : "bg-white text-stone-400 ring-1 ring-stone-300"
                 }`}
               >
                 {done ? <CheckIcon className="h-3 w-3" /> : n}
@@ -38,28 +34,51 @@ function Stepper({ step }: { step: number }) {
   );
 }
 
+function ModeSwitch({ useMock, onChange, apiUrl }: { useMock: boolean; onChange: (mock: boolean) => void; apiUrl: string }) {
+  const base = "rounded-md px-2.5 py-1 text-xs font-medium transition";
+  return (
+    <div role="group" aria-label="Data source" className="flex rounded-lg bg-stone-100 p-0.5 ring-1 ring-stone-200">
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        title={`Backend at ${apiUrl}`}
+        aria-pressed={!useMock}
+        className={`${base} ${!useMock ? "bg-white text-stone-900 shadow-sm ring-1 ring-stone-200" : "text-stone-500 hover:text-stone-800"}`}
+      >
+        Live
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(true)}
+        title="Built-in simulated responses"
+        aria-pressed={useMock}
+        className={`${base} ${useMock ? "bg-amber-50 text-amber-800 shadow-sm ring-1 ring-amber-300" : "text-stone-500 hover:text-stone-800"}`}
+      >
+        Mock data
+      </button>
+    </div>
+  );
+}
+
 export function Header({
   step,
   health,
   useMock,
-  onToggleMock,
+  onMockChange,
   apiUrl,
 }: {
   step: number;
   health: HealthState;
   useMock: boolean;
-  onToggleMock: () => void;
+  onMockChange: (mock: boolean) => void;
   apiUrl: string;
 }) {
   return (
-    <header className="z-20 border-b border-slate-800/80 bg-[#07090f]/85 backdrop-blur">
+    <header className="z-20 border-b border-stone-200 bg-paper/85 backdrop-blur">
       <div className="flex h-14 items-center gap-6 px-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-lg shadow-violet-900/50">
-            <ShieldIcon className="h-4.5 w-4.5 text-white" />
-          </span>
-          <span className="text-xl font-black tracking-tight text-white">Airlock</span>
-          <span className="hidden text-sm text-slate-500 2xl:inline">Your data stays here. Only placeholders leave.</span>
+          <LogoMark className="h-7 w-7" />
+          <span className="font-display text-[1.3rem] leading-none tracking-[-0.01em] text-stone-950">Airlock</span>
         </div>
 
         <div className="mx-auto">
@@ -68,18 +87,7 @@ export function Header({
 
         <div className="flex items-center gap-2">
           <StatusPill state={health} />
-          <button
-            type="button"
-            onClick={onToggleMock}
-            title={useMock ? "Using built-in mock responses — click for the live API" : `Using backend at ${apiUrl} — click for mock data`}
-            className={`rounded-full px-3 py-1 text-xs font-bold tracking-wide ring-1 transition ${
-              useMock
-                ? "bg-fuchsia-500/20 text-fuchsia-200 ring-fuchsia-400/70"
-                : "bg-slate-900 text-slate-400 ring-slate-700 hover:text-slate-200"
-            }`}
-          >
-            {useMock ? "MOCK DATA" : "Live API"}
-          </button>
+          <ModeSwitch useMock={useMock} onChange={onMockChange} apiUrl={apiUrl} />
         </div>
       </div>
     </header>
