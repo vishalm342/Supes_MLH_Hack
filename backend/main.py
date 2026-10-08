@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -28,7 +27,9 @@ CLOUD_SYSTEM_PROMPT = (
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    gemma.load()
+    # Gemma takes ~47 s to load; load it in the background so /health answers
+    # immediately and /scan can return 503 until it is ready.
+    gemma.start_background_load()
     yield
     gemma.shutdown()
 
@@ -69,6 +70,7 @@ def health() -> dict:
     return {
         "ok": True,
         "gemma_loaded": gemma.is_loaded(),
+        "gemma_status": gemma.status(),
         "model_alias": gemma.model_alias(),
         "cloud_configured": cloud.is_configured(),
     }
@@ -77,6 +79,8 @@ def health() -> dict:
 @app.post("/scan")
 def scan(body: ScanRequest) -> dict:
     _check_text(body.text)
+    if gemma.status() == "loading":
+        raise HTTPException(status_code=503, detail="Gemma is still loading (about a minute after startup). Try again shortly.")
     return pipeline.scan(body.text)
 
 
@@ -99,9 +103,9 @@ def ask(body: AskRequest) -> dict:
         outgoing.append({"role": "user", "content": cloud_saw})
 
         # Last line of defence: no redacted secret may ever leave the machine.
-        serialized = json.dumps(outgoing, ensure_ascii=False)
+        contents = [message["content"] for message in outgoing]
         for secret in session.redacted_values():
-            if secret in serialized:
+            if any(secret in content for content in contents):
                 raise HTTPException(status_code=500, detail="Refusing to send: redacted value found in outgoing payload.")
 
         started = time.perf_counter()

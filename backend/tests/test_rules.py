@@ -121,3 +121,39 @@ def test_overlap_priority_prefers_jwt_over_generic_api_key():
     results = detect(jwt)
     assert len(results) == 1
     assert results[0]["type"] == "JWT"
+
+
+def test_ipv4_before_sentence_period():
+    text = "The log exposed 203.0.113.9."
+    results = detect(text)
+    assert [(r["type"], r["text"]) for r in results] == [("IP_ADDRESS", "203.0.113.9")]
+    _assert_valid(results, text)
+
+
+def test_ipv4_rejects_five_octets():
+    assert detect("version 1.2.3.4.5 shipped") == []
+
+
+def test_password_is_phrase():
+    text = "The temporary admin password is Quasar#8841 and expires today."
+    results = detect(text)
+    assert [(r["type"], r["text"]) for r in results] == [("PASSWORD", "Quasar#8841")]
+    _assert_valid(results, text)
+
+
+def test_password_is_ignores_plain_words():
+    assert detect("The password is required for every login.") == []
+
+
+def test_env_prefixed_api_key():
+    text = "API key ak_test_7QpLm2Rs9Tv4, rotate it"
+    results = detect(text)
+    assert [(r["type"], r["text"]) for r in results] == [("API_KEY", "ak_test_7QpLm2Rs9Tv4")]
+    _assert_valid(results, text)
+
+
+def test_internal_first_label_url():
+    text = "The runbook uses https://internal.example.test/admin during the drill."
+    results = detect(text)
+    assert [(r["type"], r["text"]) for r in results] == [("INTERNAL_URL", "https://internal.example.test/admin")]
+    _assert_valid(results, text)
