@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Supes MLH Hack",
-  description: "Supes MLH Hack frontend",
+  title: "Airlock — your data stays here",
+  description: "A local privacy gateway between your private data and cloud AI.",
 };
 
 export default function RootLayout({

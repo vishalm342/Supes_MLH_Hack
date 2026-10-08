@@ -205,3 +205,6 @@ Apache License 2.0. See [LICENSE](./LICENSE).
 - [x] Repository is organized and complete
 
 TODO — record real latency numbers, evaluation results, and challenges/learnings after the demo.
+# Supes_MLH_Hack
+
+Project for the MLH hackathon.
