@@ -23,7 +23,7 @@ export function EntityTable({ entities }: { entities: Entity[] }) {
             const gemma = e.source === "gemma";
             return (
               <tr
-                key={e.replacement}
+                key={e.text}
                 className={`border-t border-slate-800 ${
                   gemma ? "bg-violet-500/10 shadow-[inset_3px_0_0_0_rgb(167,139,250)]" : ""
                 }`}

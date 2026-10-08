@@ -13,7 +13,10 @@ export type HighlightMode =
   | "sanitized" // placeholder text: mark [TYPE_N]
   | "response"; // rehydrated answer: mark restored values and leftover (redacted) placeholders
 
-const PLACEHOLDER_RE = /\[[A-Z][A-Z_]*_\d+\]/g;
+const PLACEHOLDER_RE = /\[([A-Z][A-Z_]*)_\d+\]/g;
+
+// Never rehydrated by the backend (docs/AIRLOCK_CONTEXT.md §6.1).
+export const REDACTED_TYPES = new Set(["API_KEY", "PASSWORD", "JWT", "CARD", "GOV_ID"]);
 
 interface Match {
   start: number;
@@ -53,12 +56,14 @@ export function segment(text: string, entities: Entity[], mode: HighlightMode): 
   if (mode !== "original") {
     const byPlaceholder = new Map(entities.map((e) => [e.replacement, e]));
     for (const m of text.matchAll(PLACEHOLDER_RE)) {
+      // Follow-up questions can mint placeholders the scan never returned; fall back to the type name.
       const entity = byPlaceholder.get(m[0]);
+      const redacted = entity ? entity.redacted : REDACTED_TYPES.has(m[1]);
       const start = m.index ?? 0;
       matches.push({
         start,
         end: start + m[0].length,
-        kind: entity?.redacted ? "redacted" : "placeholder",
+        kind: redacted ? "redacted" : "placeholder",
         entity,
       });
     }
