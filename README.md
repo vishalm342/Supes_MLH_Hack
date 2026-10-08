@@ -144,6 +144,7 @@ The local application provides a single flow for scanning a prompt, inspecting d
 **Demo Video:** TODO — add demo video link.
 
 The planned demonstration scans the customer escalation sample offline, shows typed placeholders, sends only sanitized text to the cloud, and displays the locally rehydrated response.
+https://www.youtube.com/watch?v=4YAaxnsONkw
 
 ## Open Source and AI Usage
 
