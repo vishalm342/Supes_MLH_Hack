@@ -29,6 +29,8 @@ class Session:
     sanitized_text: str = ""
     # Case-folded value -> placeholder, for PERSON/ORG matching.
     folded_to_ph: dict[tuple[str, str], str] = field(default_factory=dict)
+    # Placeholder -> tier that first caught it ("rule" or "gemma").
+    ph_source: dict[str, str] = field(default_factory=dict)
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def placeholder_for(self, entity_type: str, value: str) -> str:
@@ -76,18 +78,35 @@ def _overlaps(a: dict, b: dict) -> bool:
     return a["start"] < b["end"] and b["start"] < a["end"]
 
 
-def _merge(rule_spans: list[dict], gemma_spans: list[dict]) -> list[dict]:
-    """Rule spans win over overlapping Gemma spans; longer Gemma span wins among Gemma."""
+def _merge(rule_spans: list[dict], gemma_spans: list[dict], known_spans: list[dict] = ()) -> list[dict]:
+    """Rule spans win; then values already known to the session; then Gemma (longer span first)."""
 
-    kept_gemma: list[dict] = []
-    for span in sorted(gemma_spans, key=lambda s: (-(s["end"] - s["start"]), s["start"])):
-        if any(_overlaps(span, r) for r in rule_spans):
-            continue
-        if any(_overlaps(span, g) for g in kept_gemma):
-            continue
-        kept_gemma.append(span)
+    kept = list(rule_spans)
+    for tier in (known_spans, gemma_spans):
+        for span in sorted(tier, key=lambda s: (-(s["end"] - s["start"]), s["start"])):
+            if not any(_overlaps(span, k) for k in kept):
+                kept.append(span)
 
-    return sorted(rule_spans + kept_gemma, key=lambda s: s["start"])
+    return sorted(kept, key=lambda s: s["start"])
+
+
+def _known_spans(session: Session, text: str) -> list[dict]:
+    """Spans for every value the session already has a placeholder for (earlier turns of a chat)."""
+
+    spans = []
+    for value, placeholder in session.value_to_ph.items():
+        entity_type = session.ph_type[placeholder]
+        if entity_type in CASE_INSENSITIVE_TYPES:
+            left = r"\b" if value[:1].isalnum() else ""
+            right = r"\b" if value[-1:].isalnum() else ""
+            matches = re.finditer(left + re.escape(value) + right, text, flags=re.IGNORECASE)
+            occurrences = [(m.start(), m.end()) for m in matches]
+        else:
+            occurrences = _find_occurrences(text, value, entity_type)
+        source = session.ph_source.get(placeholder, "rule")
+        for start, end in occurrences:
+            spans.append({"type": entity_type, "text": text[start:end], "start": start, "end": end, "source": source})
+    return spans
 
 
 def _apply_spans(text: str, spans: list[dict]) -> str:
@@ -97,8 +116,12 @@ def _apply_spans(text: str, spans: list[dict]) -> str:
     return out
 
 
-def scan(text: str) -> dict:
-    """Run both tiers over `text` and return the /scan response body."""
+def scan(text: str, session: Session | None = None) -> dict:
+    """Run both tiers over `text` and return the /scan response body.
+
+    With `session` (a follow-up message in the same chat), placeholders continue from that
+    session's map, and values it already knows are masked even if neither tier flags them again.
+    """
 
     total_started = time.perf_counter()
 
@@ -128,11 +151,14 @@ def scan(text: str) -> dict:
         for h in gemma_hits
         for s, e in _find_occurrences(text, h["text"], h["type"])
     ]
-    spans = _merge(rule_spans, gemma_spans)
+    is_new_session = session is None
+    if session is None:
+        session = Session(scan_id=str(uuid.uuid4()))
+    spans = _merge(rule_spans, gemma_spans, _known_spans(session, text))
 
-    session = Session(scan_id=str(uuid.uuid4()))
     for span in spans:
         span["replacement"] = session.placeholder_for(span["type"], span["text"])
+        session.ph_source.setdefault(span["replacement"], span["source"])
 
     sanitized_text = _apply_spans(text, spans)
     session.sanitized_text = sanitized_text
@@ -162,10 +188,11 @@ def scan(text: str) -> dict:
 
     entities = list(rows.values())
 
-    SESSIONS[session.scan_id] = session
-    # Bound memory on long demo runs: drop the oldest scans first.
-    while len(SESSIONS) > MAX_SESSIONS:
-        SESSIONS.pop(next(iter(SESSIONS)))
+    if is_new_session:
+        SESSIONS[session.scan_id] = session
+        # Bound memory on long demo runs: drop the oldest scans first.
+        while len(SESSIONS) > MAX_SESSIONS:
+            SESSIONS.pop(next(iter(SESSIONS)))
 
     return {
         "scan_id": session.scan_id,

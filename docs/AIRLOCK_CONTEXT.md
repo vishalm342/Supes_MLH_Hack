@@ -187,6 +187,8 @@ Request:
 { "text": "My customer Priya's email is priya@example.com and the key is sk_live_abc123XYZ..." }
 ```
 
+Optional `"scan_id"`: continue that session (the next message in the same chat). Placeholders keep their numbers, values already in the session are masked even if not re-detected, and the response's `scan_id` is unchanged. Unknown `scan_id` → 404.
+
 Response:
 
 ```
@@ -234,7 +236,15 @@ Response:
 }
 ```
 
+**`POST /rehydrate`** (for the browser extension, which reads replies from the AI site itself)
+
+Request: `{ "scan_id": "uuid", "text": "Dear [PERSON_1], ... [API_KEY_1]" }`
+
+Response: `{ "scan_id": "uuid", "text": "Dear Priya, ... [API_KEY_1]" }`. Same rules as `/ask`'s `response`: redacted types and unknown placeholders stay as-is. Text up to 200,000 chars (413 above).
+
 **Errors:** `{ "detail": "message" }` with HTTP 4xx/5xx. Unknown `scan_id` → 404.
+
+**CORS:** only the origins in `CORS_ORIGINS` (default: the local web UI) and `CORS_ORIGIN_REGEX` (default: Chrome extensions) may call the API from a browser.
 
 ---
 

@@ -153,6 +153,7 @@ cp frontend/.env.example frontend/.env.local      # Windows: copy frontend\.env.
 | `.env` | `CLOUD_BASE_URL`, `CLOUD_API_KEY`, `CLOUD_MODEL` | Any OpenAI-compatible `/chat/completions` endpoint. Needed for **Ask Safely**. |
 | `.env` | `GEMMA_ENABLED` | `true` loads Gemma 4 at startup (~47 s); `false` runs rules-only. |
 | `.env` | `GEMMA_MODEL_ALIAS` | Foundry Local alias, default `gemma-4-e2b-it`. |
+| `.env` | `CORS_ORIGINS`, `CORS_ORIGIN_REGEX` | Browser origins allowed to call the backend: the local web UI and Chrome extensions by default. Other websites are refused. |
 | `frontend/.env.local` | `NEXT_PUBLIC_API_URL` | Backend URL, default `http://localhost:8000`. |
 | `frontend/.env.local` | `NEXT_PUBLIC_USE_MOCK` | `true` uses built-in mock responses instead of the backend. |
 
@@ -164,7 +165,7 @@ Run each in its own terminal, from the repo root:
 
 ```bash
 # 1. backend — wait for "Application startup complete" (Gemma loads first when enabled)
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 # 2. frontend — then open http://localhost:3000
 cd frontend && npm run dev -- -H 0.0.0.0
@@ -172,7 +173,9 @@ cd frontend && npm run dev -- -H 0.0.0.0
 
 To run without Gemma, set `GEMMA_ENABLED=false` in `.env` and restart the backend.
 
-Teammates can point their frontend at Rahul's backend by setting `NEXT_PUBLIC_API_URL=http://<rahul-lan-ip>:8000` in `frontend/.env.local`.
+To let teammates use Rahul's backend over the LAN, start it with `--host 0.0.0.0`, add their UI origin (`http://<their-ip>:3000`) to `CORS_ORIGINS` in `.env`, and set `NEXT_PUBLIC_API_URL=http://<rahul-lan-ip>:8000` in their `frontend/.env.local`.
+
+The browser extension uses the same backend; see [`docs/EXTENSION_API.md`](docs/EXTENSION_API.md) for the endpoints and flow.
 
 ### Testing
 
