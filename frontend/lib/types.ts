@@ -7,7 +7,6 @@ export type EntitySource = "rule" | "gemma";
 export interface Health {
   ok: boolean;
   gemma_loaded: boolean;
-  gemma_status?: "disabled" | "not_loaded" | "loading" | "loaded" | "failed";
   model_alias: string;
   cloud_configured: boolean;
 }

@@ -32,13 +32,9 @@ export function StatusPill({ state }: { state: HealthState }) {
   const { health } = state;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {health.gemma_status === "loading" ? (
-        <Pill color="bg-sky-400 animate-pulse">Gemma loading…</Pill>
-      ) : (
-        <Pill color={health.gemma_loaded ? "bg-emerald-400" : "bg-amber-400"}>
-          {health.gemma_loaded ? `Gemma loaded · ${health.model_alias}` : "Gemma off · rules only"}
-        </Pill>
-      )}
+      <Pill color={health.gemma_loaded ? "bg-emerald-400" : "bg-amber-400"}>
+        {health.gemma_loaded ? `Gemma loaded · ${health.model_alias}` : "Gemma off · rules only"}
+      </Pill>
       <Pill color={health.cloud_configured ? "bg-emerald-400" : "bg-amber-400"}>
         {health.cloud_configured ? "Cloud configured" : "Cloud not configured"}
       </Pill>

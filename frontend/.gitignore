@@ -4,4 +4,3 @@ out/
 .env*
 npm-debug.log*
 !.env.example
-*.tsbuildinfo

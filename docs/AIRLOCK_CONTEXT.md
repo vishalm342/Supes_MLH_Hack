@@ -175,9 +175,8 @@ def detect(text: str) -> list[dict]:                 # [{"type", "text", "reason
 **`GET /health`**
 
 ```
-{ "ok": true, "gemma_loaded": true, "gemma_status": "loaded", "model_alias": "gemma-4-e2b-it", "cloud_configured": true }
+{ "ok": true, "gemma_loaded": true, "model_alias": "gemma-4-e2b-it", "cloud_configured": true }
 ```
-- `gemma_status` (additive): `"disabled"` (GEMMA_ENABLED=false), `"loading"` (the first ~47 s after startup; Gemma loads in the background), `"loaded"`, or `"failed"` (rules-only).
 
 **`POST /scan`**
 
@@ -207,8 +206,6 @@ Response:
 - `source`: `"rule"` or `"gemma"` — the UI shows which tier caught each item.
 - `count`: occurrences replaced in the text.
 - If Gemma is unavailable or fails, `gemma_used` is `false` and the scan still returns rule results.
-- While Gemma is still loading (`gemma_status: "loading"`), `/scan` returns **503** instead of silently scanning rules-only.
-- Entities caught by Gemma may carry an optional `reason` string.
 
 **`POST /ask`**
 

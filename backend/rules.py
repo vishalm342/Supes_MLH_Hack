@@ -15,8 +15,7 @@ _PRIORITY = {
 }
 
 _OCTET = r"(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
-# A trailing "." is allowed (end of sentence); "1.2.3.4.5" is still rejected.
-_IPV4_RE = re.compile(rf"(?<!\d)(?<!\d\.){_OCTET}(?:\.{_OCTET}){{3}}(?!\d|\.\d)")
+_IPV4_RE = re.compile(rf"(?<![\d.]){_OCTET}(?:\.{_OCTET}){{3}}(?![\d.])")
 
 _EMAIL_RE = re.compile(
     r"(?<![A-Za-z0-9.!#$%&'*+/=?^_`{|}~-])"
@@ -39,20 +38,11 @@ _API_PREFIX_PATTERNS = (
         r"[A-Za-z0-9_+\-/=]{8,}"
         r"(?![A-Za-z0-9_+\-/=])"
     ),
-    # Generic "<prefix>_<live|test|prod>_<token>" keys, e.g. ak_test_7QpLm2Rs9Tv4.
-    re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z]{2,10}_(?:live|test|prod)_[A-Za-z0-9]{8,}(?![A-Za-z0-9_-])"),
 )
 
 _PASSWORD_RE = re.compile(
     r"(?<![A-Za-z0-9])(?:password|passwd|pwd|secret|pass)\b\s*[:=]\s*"
     r"(?:\"(?P<double>[^\"]+)\"|'(?P<single>[^']+)'|(?P<bare>[^\s,;]+))",
-    re.IGNORECASE,
-)
-
-# "the admin password is Quasar#8841": only values that look like a credential
-# (digit or symbol, 6+ chars), so "the password is required" is not flagged.
-_PASSWORD_IS_RE = re.compile(
-    r"(?<![A-Za-z0-9])(?:password|passwd|passcode|pwd)\s+(?:is|was)\s+(?P<value>[^\s,;]+)",
     re.IGNORECASE,
 )
 
@@ -129,12 +119,6 @@ def _add_password_candidates(text: str, candidates: list[dict]) -> None:
                 candidates.append(_candidate("PASSWORD", value, start, end))
                 break
 
-    for match in _PASSWORD_IS_RE.finditer(text):
-        value = match.group("value").rstrip(".,;:!?)]}'\"")
-        if len(value) >= 6 and re.search(r"[\d\W_]", value):
-            start = match.start("value")
-            candidates.append(_candidate("PASSWORD", value, start, start + len(value)))
-
 
 def _add_url_candidates(text: str, candidates: list[dict]) -> None:
     private_host_re = re.compile(
@@ -146,7 +130,6 @@ def _add_url_candidates(text: str, candidates: list[dict]) -> None:
     for match in _URL_RE.finditer(text):
         host = match.group("host").lower().rstrip(".")
         is_suffix = host.endswith((".internal", ".local", ".corp", ".lan", ".intranet"))
-        is_suffix = is_suffix or host.split(".")[0] in {"internal", "intranet", "corp", "staging"}
         is_private_ip = bool(private_host_re.fullmatch(host)) or host == "localhost"
         if not (is_private_ip or is_suffix):
             continue

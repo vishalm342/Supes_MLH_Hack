@@ -59,7 +59,6 @@ class Session:
 
 
 SESSIONS: dict[str, Session] = {}
-MAX_SESSIONS = 500
 
 
 def _find_occurrences(text: str, value: str, entity_type: str) -> list[tuple[int, int]]:
@@ -163,9 +162,6 @@ def scan(text: str) -> dict:
     entities = list(rows.values())
 
     SESSIONS[session.scan_id] = session
-    # Bound memory on long demo runs: drop the oldest scans first.
-    while len(SESSIONS) > MAX_SESSIONS:
-        SESSIONS.pop(next(iter(SESSIONS)))
 
     return {
         "scan_id": session.scan_id,

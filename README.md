@@ -174,36 +174,14 @@ To run without Gemma, set `GEMMA_ENABLED=false` in `.env` and restart the backen
 
 Teammates can point their frontend at Rahul's backend by setting `NEXT_PUBLIC_API_URL=http://<rahul-lan-ip>:8000` in `frontend/.env.local`.
 
-### Testing
+### End-to-end smoke test
 
-**Fast gate (no server, no Gemma, no cloud key):**
-
-```bash
-pip install -r backend/requirements-dev.txt
-pytest backend/tests              # rule/risk unit tests + API integration suite (cloud and Gemma output faked)
-python eval/validate_dataset.py   # prints "OK 25 lines"
-```
-
-`backend/tests/test_api.py` drives the real FastAPI app, rules, risk and pipeline. It covers input validation (400/413/422), placeholders and case-insensitive names, redaction, Gemma bad-JSON/exception fallback, chunking of long Unicode text, `/ask` history and follow-ups, cloud errors and timeouts (502), the leak guard, and concurrent `/ask` on one scan.
-
-**Against a running backend** (`uvicorn backend.main:app --port 8000`):
+With the backend running, this scans every sample in `samples/demo_samples.json`, sends the first one through `/ask`, and checks that no detected value reached the cloud and that redacted values never come back:
 
 ```bash
-python -m backend.smoke_test      # all demo samples through /scan and /ask; add --no-cloud without a cloud key
-python eval/run_eval.py           # recall on eval/dataset.jsonl, per type and per tier, plus Gemma latency
+python -m backend.smoke_test                     # add --no-cloud if no cloud key is set
+pytest backend/tests                             # rule and risk unit tests (pip install -r backend/requirements-dev.txt)
 ```
-
-Run these in three configurations by editing `.env` and restarting the backend:
-
-| Config | `GEMMA_ENABLED` | Cloud key | Notes |
-|---|---|---|---|
-| A | `false` | unset | Rules-only, any machine. Use `smoke_test --no-cloud`. |
-| B | `false` | set | Rules-only plus the real cloud model. |
-| C | `true` | set | Full path, on the Gemma machine. `/scan` returns 503 for about 47 s while Gemma loads, and both scripts wait for it. |
-
-Run `eval/run_eval.py` in A and in C to get the rules-only vs rules+Gemma comparison and the Gemma text-only latency. Report only the numbers it prints.
-
-**Offline demo:** start the backend while online, wait until `/health` shows `"gemma_status": "loaded"`, and only then turn Wi-Fi off. The Foundry Local SDK resolves its model catalog during startup; in our test container it crashed the process (segfault) when that lookup had no network.
 
 ### Usage
 
