@@ -1,10 +1,19 @@
-* {
-  box-sizing: border-box;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", monospace;
 }
 
-html,
+html {
+  color-scheme: dark;
+}
+
 body {
-  margin: 0;
-  padding: 0;
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-slate-950 text-slate-100 antialiased;
+  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgb(139 92 246 / 0.12), transparent);
+}
+
+mark {
+  color: inherit;
 }
