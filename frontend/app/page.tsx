@@ -46,7 +46,7 @@ export default function Home() {
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const [scannedText, setScannedText] = useState("");
   const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<{ message: string; status: number | null } | null>(null);
 
   const [turns, setTurns] = useState<Turn[]>([]);
   const [asking, setAsking] = useState(false);
@@ -97,7 +97,7 @@ export default function Home() {
       setScannedText(input);
     } catch (err) {
       setScan(null);
-      setScanError(errorMessage(err));
+      setScanError({ message: errorMessage(err), status: err instanceof ApiError ? err.status : null });
     } finally {
       setScanning(false);
     }
@@ -123,6 +123,7 @@ export default function Home() {
   );
 
   const gemmaExpected = health.status !== "ok" || health.health.gemma_loaded;
+  const gemmaLoading = health.status === "ok" && health.health.gemma_status === "loading";
   const textChanged = scan !== null && text.trim() !== scannedText;
   const gemmaCount = scan?.entities.filter((e) => e.source === "gemma").length ?? 0;
   const ruleCount = (scan?.entities.length ?? 0) - gemmaCount;
@@ -206,6 +207,11 @@ export default function Home() {
               </button>
               <span className="text-xs text-slate-500">Ctrl+Enter · nothing leaves this device</span>
             </div>
+            {gemmaLoading && (
+              <p className="mt-3 rounded-md bg-sky-500/10 px-3 py-2 text-sm text-sky-200 ring-1 ring-sky-500/40">
+                Gemma is still loading on the backend (about a minute after startup). Scans will work once it&apos;s ready.
+              </p>
+            )}
           </section>
 
           {/* Step 2: scan results */}
@@ -230,7 +236,11 @@ export default function Home() {
             )}
 
             {!scanning && scanError && (
-              <ErrorBanner title="Scan failed" message={scanError} action={{ label: "Retry", onClick: runScan }} />
+              <ErrorBanner
+                title={scanError.status === 503 ? "Not ready yet" : "Scan failed"}
+                message={scanError.message}
+                action={{ label: "Retry", onClick: runScan }}
+              />
             )}
 
             {!scanning && !scanError && !scan && (
@@ -268,7 +278,7 @@ export default function Home() {
                 <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                   <span className="font-semibold text-emerald-400">✓ Processed locally</span>
                   {scan.timings_ms.rules != null && <span>rules {scan.timings_ms.rules} ms</span>}
-                  {scan.timings_ms.gemma != null && <span>Gemma {scan.timings_ms.gemma} ms</span>}
+                  {scan.gemma_used && scan.timings_ms.gemma != null && <span>Gemma {scan.timings_ms.gemma} ms</span>}
                   {scan.timings_ms.total != null && <span>total {scan.timings_ms.total} ms</span>}
                 </p>
               </div>
@@ -338,7 +348,13 @@ export default function Home() {
             {askError && (
               <div className="mt-4">
                 <ErrorBanner
-                  title={askError instanceof ApiError && askError.status === 502 ? "Cloud model error" : "Ask failed"}
+                  title={
+                    askError.message.includes("Refusing to send")
+                      ? "Blocked by Airlock: a redacted secret was about to leave this device"
+                      : askError instanceof ApiError && askError.status === 502
+                        ? "Cloud model error"
+                        : "Ask failed"
+                  }
                   message={askError.message}
                   action={
                     askError instanceof ApiError && askError.status === 404

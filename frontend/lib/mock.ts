@@ -1,37 +1,37 @@
 // Mock backend that follows the §6.4 contract, so the UI can be built and demoed without the API.
 // Detection here is a toy: a few regexes plus a fixed list of "contextual" terms from the samples.
 
+import { REDACTED_TYPES } from "./highlight";
 import type { AirlockApi, AskResponse, Entity, EntityRisk, EntitySource, OverallRisk, ScanResponse } from "./types";
 
-const REDACTED_TYPES = new Set(["API_KEY", "PASSWORD", "JWT", "CARD", "GOV_ID"]);
 const HIGH_TYPES = new Set([...REDACTED_TYPES, "EMAIL", "MEDICAL", "FINANCIAL"]);
 const MEDIUM_TYPES = new Set(["PERSON", "ORG", "PHONE", "ADDRESS", "HR", "PROJECT", "INTERNAL_URL", "IP_ADDRESS"]);
 
 const RULES: [string, RegExp][] = [
   ["INTERNAL_URL", /\bhttps?:\/\/[\w.-]+\.(?:internal|corp|local|lan)\b(?:[^\s,;]*[^\s,;.])?/g],
   ["EMAIL", /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g],
-  ["API_KEY", /\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}\b|\bAKIA[0-9A-Z]{16}\b|\bghp_[A-Za-z0-9]{20,}\b/g],
+  ["API_KEY", /\b(?:sk|pk|rk|ak)_(?:live|test)_[A-Za-z0-9]{8,}\b|\bAKIA[0-9A-Z]{16}\b|\bghp_[A-Za-z0-9]{20,}\b/g],
   ["PASSWORD", /(?<=\bpassword(?:\s+is)?[\s:=]+)(?!is\b)[^\s,;]*[^\s,;.]/gi],
   ["CARD", /\b(?:\d{4}[ -]?){3}\d{4}\b/g],
   ["GOV_ID", /\b\d{4} \d{4} \d{4}\b/g],
   ["IP_ADDRESS", /\b(?:\d{1,3}\.){3}\d{1,3}\b/g],
-  ["PHONE", /(?:\+91[\s-]?)?\b[6-9]\d{4}[\s-]?\d{5}\b/g],
+  ["PHONE", /\+\d{1,3}(?:[\s-]?\d{2,5}){2,4}\b|\b[6-9]\d{4}[\s-]?\d{5}\b/g],
 ];
 
 // What the local model would catch that no regex can.
 const CONTEXTUAL: { text: string; type: string; reason: string }[] = [
   { text: "Henderson", type: "ORG", reason: "Customer account name" },
-  { text: "Priya Raman", type: "PERSON", reason: "Named customer contact (CFO)" },
-  { text: "₹40L renewal", type: "FINANCIAL", reason: "Deal value for a named customer" },
+  { text: "Priya", type: "PERSON", reason: "Named customer contact (CFO)" },
+  { text: "40L renewal", type: "FINANCIAL", reason: "Deal value for a named customer" },
   { text: "Project Falcon", type: "PROJECT", reason: "Internal project codename" },
-  { text: "Arjun Mehta", type: "PERSON", reason: "Named employee" },
-  { text: "Lakshmi Narayanan", type: "PERSON", reason: "Patient name" },
-  { text: "type 2 diabetes", type: "MEDICAL", reason: "Diagnosis linked to a named patient" },
-  { text: "chronic kidney disease", type: "MEDICAL", reason: "Diagnosis linked to a named patient" },
-  { text: "Suresh Iyer", type: "PERSON", reason: "Treating doctor" },
-  { text: "Kovai Medical Centre", type: "ORG", reason: "Healthcare provider tied to the patient" },
-  { text: "Orion cluster", type: "PROJECT", reason: "Internal system name" },
-  { text: "Meera", type: "PERSON", reason: "Named employee" },
+  { text: "Mateo", type: "PERSON", reason: "Named service owner" },
+  { text: "Northstar", type: "ORG", reason: "Organisation tied to the leaked credentials" },
+  { text: "Anika Rao", type: "PERSON", reason: "Treating doctor" },
+  { text: "Leena", type: "PERSON", reason: "Patient name" },
+  { text: "diabetes", type: "MEDICAL", reason: "Diagnosis linked to a named patient" },
+  { text: "severe peanut allergy", type: "MEDICAL", reason: "Health condition linked to a named patient" },
+  { text: "Project Nimbus", type: "PROJECT", reason: "Internal project codename" },
+  { text: "Ibrahim", type: "PERSON", reason: "Named on-call engineer" },
 ];
 
 function entityRisk(type: string): EntityRisk {
@@ -176,7 +176,7 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export const mockApi: AirlockApi = {
   async health() {
     await delay(150);
-    return { ok: true, gemma_loaded: true, model_alias: "gemma-4-e2b-it (mock)", cloud_configured: true };
+    return { ok: true, gemma_loaded: true, gemma_status: "loaded", model_alias: "gemma-4-e2b-it (mock)", cloud_configured: true };
   },
 
   async scan(text) {
