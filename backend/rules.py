@@ -23,7 +23,8 @@ _EMAIL_RE = re.compile(
     r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+"
     r"@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
     r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+"
-    r"(?![A-Za-z0-9.!#$%&'*+/=?^_`{|}~-])"
+    # A trailing "." ends the sentence, not the address.
+    r"(?![A-Za-z0-9!#$%&'*+/=?^_`{|}~-]|\.[A-Za-z0-9])"
 )
 
 _JWT_RE = re.compile(

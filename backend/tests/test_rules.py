@@ -157,3 +157,10 @@ def test_internal_first_label_url():
     results = detect(text)
     assert [(r["type"], r["text"]) for r in results] == [("INTERNAL_URL", "https://internal.example.test/admin")]
     _assert_valid(results, text)
+
+
+def test_email_before_sentence_period():
+    text = "Please cc ops@acme.example. Also x@y.co.uk."
+    results = detect(text)
+    assert [(r["type"], r["text"]) for r in results] == [("EMAIL", "ops@acme.example"), ("EMAIL", "x@y.co.uk")]
+    _assert_valid(results, text)
