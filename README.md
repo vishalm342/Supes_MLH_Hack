@@ -262,6 +262,8 @@ With the extension, write a prompt on ChatGPT, Claude or Gemini and click the **
 
 **Devpost Project:** TODO — add Devpost project link.
 
+https://dev.to/harishb2006/airlock-let-cloud-ai-work-with-private-data-without-seeing-it-404i
+
 TODO — complete the MLH/OrganizerHQ submission and select the Best Use of Gemma 4 challenge.
 
 ## Credits and License
