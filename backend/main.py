@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,6 +17,13 @@ from backend import cloud, gemma, pipeline  # noqa: E402
 logging.basicConfig(level=logging.INFO)
 
 MAX_TEXT_CHARS = 20_000
+# Cloud answers can be longer than prompts; this only bounds /rehydrate input.
+MAX_REHYDRATE_CHARS = 200_000
+
+# Browser origins allowed to call the API. Default: the local web UI and any Chrome
+# extension. Without this, any website open in the browser could call localhost:8000.
+DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
+DEFAULT_CORS_ORIGIN_REGEX = r"chrome-extension://[a-p]{32}"
 
 CLOUD_SYSTEM_PROMPT = (
     "Some values in the user's message were replaced with placeholders like "
@@ -38,19 +46,34 @@ app = FastAPI(title="Airlock API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",") if o.strip()],
+    allow_origin_regex=os.getenv("CORS_ORIGIN_REGEX", DEFAULT_CORS_ORIGIN_REGEX) or None,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
 class ScanRequest(BaseModel):
     text: str
+    # Continue an existing session (e.g. the next message in the same chat) so placeholders stay stable.
+    scan_id: str | None = None
 
 
 class AskRequest(BaseModel):
     scan_id: str
     question: str | None = None
+
+
+class RehydrateRequest(BaseModel):
+    scan_id: str
+    text: str
+
+
+def _get_session(scan_id: str) -> pipeline.Session:
+    session = pipeline.SESSIONS.get(scan_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Unknown scan_id.")
+    return session
 
 
 def _check_text(text: str) -> None:
@@ -81,14 +104,25 @@ def scan(body: ScanRequest) -> dict:
     _check_text(body.text)
     if gemma.status() == "loading":
         raise HTTPException(status_code=503, detail="Gemma is still loading (about a minute after startup). Try again shortly.")
-    return pipeline.scan(body.text)
+    if body.scan_id is None:
+        return pipeline.scan(body.text)
+    session = _get_session(body.scan_id)
+    with session.lock:
+        return pipeline.scan(body.text, session)
+
+
+@app.post("/rehydrate")
+def rehydrate(body: RehydrateRequest) -> dict:
+    """Restore placeholders in text produced elsewhere (e.g. a ChatGPT reply read by the extension)."""
+    session = _get_session(body.scan_id)
+    if len(body.text) > MAX_REHYDRATE_CHARS:
+        raise HTTPException(status_code=413, detail=f"Text exceeds {MAX_REHYDRATE_CHARS} characters.")
+    return {"scan_id": session.scan_id, "text": pipeline.rehydrate(session, body.text)}
 
 
 @app.post("/ask")
 def ask(body: AskRequest) -> dict:
-    session = pipeline.SESSIONS.get(body.scan_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Unknown scan_id.")
+    session = _get_session(body.scan_id)
 
     with session.lock:
         if body.question is not None and body.question.strip():

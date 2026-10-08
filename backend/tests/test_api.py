@@ -518,3 +518,96 @@ def test_leak_guard_refuses_redacted_values(client, fake_cloud, monkeypatch, sec
     assert response.status_code == 500
     assert "Refusing to send" in response.json()["detail"]
     assert fake_cloud.payloads == []
+
+
+# --------------------------------------------------------------------------- extension support: chat continuation, /rehydrate, CORS
+
+EXTENSION_ORIGIN = "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+
+
+def test_scan_continuation_keeps_placeholders_across_messages(client, fake_gemma):
+    fake_gemma.respond = lambda chunk: entities_json(("Priya", "PERSON")) if "CFO" in chunk else entities_json()
+    first = scan(client, "Our CFO Priya (priya@acme.example) wants the renewal numbers.")
+
+    # Second message in the same chat: Gemma misses Priya this time, a new email appears.
+    response = client.post("/scan", json={"scan_id": first["scan_id"], "text": "Tell priya and ops@acme.example; cc priya@acme.example."})
+    assert response.status_code == 200
+    second = response.json()
+
+    assert second["scan_id"] == first["scan_id"]
+    assert second["sanitized_text"] == "Tell [PERSON_1] and [EMAIL_2]; cc [EMAIL_1]."
+    rows = by_text(second)
+    assert rows["priya"]["source"] == "gemma"  # tier that originally caught it
+    assert rows["ops@acme.example"]["replacement"] == "[EMAIL_2]"
+    assert len(pipeline.SESSIONS) == 1
+
+
+def test_scan_continuation_unknown_scan_id(client):
+    response = client.post("/scan", json={"scan_id": "does-not-exist", "text": "mail a@b.com"})
+    assert response.status_code == 404
+
+
+def test_scan_continuation_still_validates_text(client):
+    first = scan(client, "mail a@b.com")
+    assert client.post("/scan", json={"scan_id": first["scan_id"], "text": "  "}).status_code == 400
+
+
+def test_rehydrate_restores_pseudonyms_only(client):
+    body = scan(client, f"Email a.b@example.com, key {API_KEY}")
+    reply = "Write to [EMAIL_1] and rotate [API_KEY_1]; [PERSON_9] is unknown."
+    response = client.post("/rehydrate", json={"scan_id": body["scan_id"], "text": reply})
+    assert response.status_code == 200
+    assert response.json() == {
+        "scan_id": body["scan_id"],
+        "text": "Write to a.b@example.com and rotate [API_KEY_1]; [PERSON_9] is unknown.",
+    }
+
+
+def test_rehydrate_errors(client):
+    body = scan(client, "mail a@b.com")
+    assert client.post("/rehydrate", json={"scan_id": "nope", "text": "[EMAIL_1]"}).status_code == 404
+    assert client.post("/rehydrate", json={"scan_id": body["scan_id"]}).status_code == 422
+    too_long = "x" * (main.MAX_REHYDRATE_CHARS + 1)
+    assert client.post("/rehydrate", json={"scan_id": body["scan_id"], "text": too_long}).status_code == 413
+    # Long cloud answers are fine as long as they are under the rehydrate limit.
+    long_ok = "[EMAIL_1] " * 5_000
+    assert client.post("/rehydrate", json={"scan_id": body["scan_id"], "text": long_ok}).status_code == 200
+
+
+def test_extension_flow_end_to_end(client, fake_gemma):
+    """Scan -> user sends sanitized text to ChatGPT -> rehydrate reply -> next message -> rehydrate."""
+    fake_gemma.respond = lambda chunk: entities_json(("Priya", "PERSON"), ("Henderson", "ORG"), ("Project Falcon", "PROJECT"))
+
+    turn1 = scan(client, HENDERSON)
+    chatgpt_reply1 = "Dear [PERSON_1], we can keep [ORG_1] if [PROJECT_1] ships. I can't see [API_KEY_1]."
+    shown1 = client.post("/rehydrate", json={"scan_id": turn1["scan_id"], "text": chatgpt_reply1}).json()["text"]
+    assert shown1 == "Dear Priya, we can keep Henderson if Project Falcon ships. I can't see [API_KEY_1]."
+
+    turn2 = client.post("/scan", json={"scan_id": turn1["scan_id"], "text": "Make it warmer for Priya at Henderson."}).json()
+    assert turn2["sanitized_text"] == "Make it warmer for [PERSON_1] at [ORG_1]."
+    shown2 = client.post("/rehydrate", json={"scan_id": turn1["scan_id"], "text": "Hi [PERSON_1], thanks for trusting us."}).json()["text"]
+    assert shown2 == "Hi Priya, thanks for trusting us."
+
+    for sent in (turn1["sanitized_text"], turn2["sanitized_text"]):
+        for value in ("Priya", "Henderson", "Project Falcon", API_KEY, "priya.r@henderson-logistics.com"):
+            assert value not in sent
+
+
+@pytest.mark.parametrize(
+    "origin, allowed",
+    [
+        (EXTENSION_ORIGIN, True),
+        ("http://localhost:3000", True),
+        ("http://127.0.0.1:3000", True),
+        ("https://evil.example", False),
+        ("https://chatgpt.com", False),  # the extension must call from its background worker, not the page
+    ],
+)
+def test_cors_allows_ui_and_extension_only(client, origin, allowed):
+    preflight = client.options(
+        "/scan",
+        headers={"Origin": origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"},
+    )
+    simple = client.post("/scan", json={"text": "mail a@b.com"}, headers={"Origin": origin})
+    assert (preflight.headers.get("access-control-allow-origin") == origin) is allowed
+    assert (simple.headers.get("access-control-allow-origin") == origin) is allowed
