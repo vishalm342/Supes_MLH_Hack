@@ -21,6 +21,7 @@ ALLOWED_TYPES = {
 }
 
 MAX_CHUNK_CHARS = 1500
+SHUTDOWN_WAIT_S = 10
 
 DETECT_SYSTEM_PROMPT = """You are a privacy scanner that runs locally. Find every sensitive item in the user's text that should not be sent to a third-party AI.
 Sensitive items include: person names; company or client names tied to business details; email addresses; phone numbers; street addresses; government ID numbers; bank, card or account numbers; money amounts tied to a person, client or deal; medical conditions, diagnoses or medications; HR details (salary, performance, disciplinary, resignation); internal project codenames; internal hostnames, URLs or IP addresses; passwords, API keys and tokens.
@@ -32,8 +33,14 @@ If nothing is sensitive, respond {"entities":[]}."""
 
 _manager = None
 _model = None
-_loaded = False
+# "disabled" | "not_loaded" | "loading" | "loaded" | "failed"
+_status = "not_loaded"
 _lock = threading.Lock()
+_lifecycle_lock = threading.Lock()
+
+
+class GemmaOutputError(RuntimeError):
+    """Raised when Gemma produced no parseable output for any chunk of a scan."""
 
 
 def _enabled() -> bool:
@@ -45,17 +52,44 @@ def model_alias() -> str:
 
 
 def is_loaded() -> bool:
-    return _loaded
+    return _status == "loaded"
+
+
+def status() -> str:
+    """Return "disabled", "not_loaded", "loading", "loaded" or "failed"."""
+    return _status
+
+
+def start_background_load() -> threading.Thread:
+    """Run load() in a daemon thread so the API can answer while Gemma loads (~47 s)."""
+
+    global _status
+    if _enabled() and _status in {"not_loaded", "failed"}:
+        _status = "loading"
+    thread = threading.Thread(target=load, name="gemma-load", daemon=True)
+    thread.start()
+    return thread
 
 
 def load() -> None:
     """Initialise Foundry Local and load Gemma once. Never raises."""
 
-    global _manager, _model, _loaded
+    global _status
 
     if not _enabled():
+        _status = "disabled"
         logger.info("GEMMA_ENABLED=false; running in rules-only mode.")
         return
+
+    with _lifecycle_lock:
+        if _status == "loaded":
+            return
+        _status = "loading"
+        _load_locked()
+
+
+def _load_locked() -> None:
+    global _manager, _model, _status
 
     try:
         # Imported lazily so machines without the SDK can run rules-only.
@@ -87,32 +121,43 @@ def load() -> None:
         load_started = time.perf_counter()
         _model.load()
         logger.info("Gemma loaded in %.2f seconds.", time.perf_counter() - load_started)
-        _loaded = True
+        _status = "loaded"
 
     except Exception:
         logger.error("Gemma failed to load; continuing in rules-only mode.\n%s", traceback.format_exc())
-        _loaded = False
+        _status = "failed"
 
 
 def shutdown() -> None:
     """Unload Gemma and close Foundry Local."""
 
-    global _manager, _model, _loaded
+    global _manager, _model, _status
 
-    _loaded = False
+    # Wait (bounded) for an in-progress load, then for any running inference, before unloading.
+    # If the load is still running after the timeout, skip unloading: the load thread is a
+    # daemon and the process is exiting anyway.
+    if not _lifecycle_lock.acquire(timeout=SHUTDOWN_WAIT_S):
+        logger.warning("Gemma is still loading; exiting without unloading.")
+        return
     try:
-        if _model is not None:
-            _model.unload()
-            _model = None
-    except Exception:
-        logger.error("Error while unloading Gemma:\n%s", traceback.format_exc())
+        with _lock:
+            if _status != "disabled":
+                _status = "not_loaded"
+            try:
+                if _model is not None:
+                    _model.unload()
+                    _model = None
+            except Exception:
+                logger.error("Error while unloading Gemma:\n%s", traceback.format_exc())
 
-    try:
-        if _manager is not None:
-            _manager.close()
-            _manager = None
-    except Exception:
-        logger.error("Error while closing Foundry Local:\n%s", traceback.format_exc())
+            try:
+                if _manager is not None:
+                    _manager.close()
+                    _manager = None
+            except Exception:
+                logger.error("Error while closing Foundry Local:\n%s", traceback.format_exc())
+    finally:
+        _lifecycle_lock.release()
 
 
 def _extract_response_text(response) -> str:
@@ -132,7 +177,7 @@ def _extract_response_text(response) -> str:
 def generate(system: str, user: str, max_tokens: int = 512, temperature: float = 0.0) -> str:
     """Run one stateless chat completion on the local model."""
 
-    if not _loaded:
+    if not is_loaded():
         raise RuntimeError("Gemma is not loaded.")
 
     from foundry_local_sdk import (
@@ -222,7 +267,9 @@ def _validate(parsed, chunk: str) -> list[dict]:
     return results
 
 
-def _detect_chunk(chunk: str) -> list[dict]:
+def _detect_chunk(chunk: str) -> list[dict] | None:
+    """Return validated entities for one chunk, or None if Gemma never produced valid JSON."""
+
     raw = generate(DETECT_SYSTEM_PROMPT, chunk)
     try:
         return _validate(_parse_json(raw), chunk)
@@ -234,26 +281,33 @@ def _detect_chunk(chunk: str) -> list[dict]:
         return _validate(_parse_json(raw), chunk)
     except (ValueError, json.JSONDecodeError):
         logger.error("Gemma returned invalid JSON twice; skipping chunk. Output: %r", raw[:500])
-        return []
+        return None
 
 
 def detect(text: str) -> list[dict]:
     """Return [{"type", "text", "reason"}] where text is an exact substring of `text`."""
 
-    if not _enabled() or not _loaded or not text.strip():
+    if not _enabled() or not is_loaded() or not text.strip():
         return []
 
     seen: set[tuple[str, str]] = set()
     results: list[dict] = []
-    for chunk in _chunk(text):
-        if not chunk.strip():
+    chunks = [chunk for chunk in _chunk(text) if chunk.strip()]
+    failed = 0
+    for chunk in chunks:
+        entities = _detect_chunk(chunk)
+        if entities is None:
+            failed += 1
             continue
-        for entity in _detect_chunk(chunk):
+        for entity in entities:
             key = (entity["type"], entity["text"])
             if key in seen:
                 continue
             seen.add(key)
             results.append(entity)
+
+    if chunks and failed == len(chunks):
+        raise GemmaOutputError("Gemma returned invalid JSON for every chunk.")
     return results
 
 
