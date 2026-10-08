@@ -27,10 +27,13 @@ The header always shows **MOCK DATA** while mock responses are in use. Mock dete
 
 | Path | What |
 |---|---|
-| `app/page.tsx` | The whole screen and its state |
+| `app/page.tsx` | Screen state, compose ↔ workspace switch, bottom action bar |
 | `lib/api.ts` | HTTP client for `/health`, `/scan`, `/ask`, plus error messages |
 | `lib/mock.ts` | Contract-shaped mock backend |
 | `lib/types.ts` | Types for the frozen API contract (§6.4) |
 | `lib/highlight.ts` | Splits text into highlighted spans (values, placeholders, restored values) |
 | `lib/samples.ts` | Demo sample texts |
-| `components/` | Badges, entity table, highlighted text, ask panels, status pills |
+| `components/Composer.tsx` | Start screen: composer, sample chips, how-it-works |
+| `components/Workspace.tsx` | Three lanes (device · Airlock · cloud), one row per step |
+| `components/Manifest.tsx` | What the Airlock held back, and whether rules or Gemma caught it |
+| `components/` (rest) | Header + stepper, badges, icons, highlighted text, status pills, error banner |

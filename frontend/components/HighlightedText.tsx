@@ -1,18 +1,31 @@
 import { segment, type HighlightMode, type Segment } from "@/lib/highlight";
 import type { Entity } from "@/lib/types";
 
+// Real values get a highlighter-pen mark (tint + solid underline, readable on a projector);
+// placeholders are monospace tokens.
+export const MARK = {
+  rule: "bg-stone-300/55 shadow-[inset_0_-2px_0_0_#78716c]",
+  gemma: "bg-blue-200/70 shadow-[inset_0_-2px_0_0_#2563eb]",
+  restored: "bg-emerald-200/60 shadow-[inset_0_-2px_0_0_#059669]",
+  placeholder: "bg-stone-100 ring-1 ring-inset ring-stone-300",
+  redacted: "bg-red-50 ring-1 ring-inset ring-red-300",
+};
+
+const PEN = "rounded-[3px] px-[2px]";
+const TOKEN = "rounded-[5px] px-1 py-px font-mono text-[0.82em] font-medium";
+
 function classFor(seg: Segment): string {
   switch (seg.kind) {
     case "original":
       return seg.entity?.source === "gemma"
-        ? "bg-violet-500/30 text-violet-50 ring-1 ring-violet-400/70"
-        : "bg-amber-400/20 text-amber-50 ring-1 ring-amber-400/60";
+        ? `${PEN} ${MARK.gemma} text-blue-950`
+        : `${PEN} ${MARK.rule} text-stone-950`;
     case "placeholder":
-      return "bg-sky-500/20 font-mono text-[0.92em] text-sky-200 ring-1 ring-sky-400/50";
+      return `${TOKEN} ${MARK.placeholder} text-stone-700`;
     case "redacted":
-      return "bg-rose-500/25 font-mono text-[0.92em] text-rose-200 ring-1 ring-rose-400/60";
+      return `${TOKEN} ${MARK.redacted} text-red-700`;
     case "restored":
-      return "bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-400/60";
+      return `${PEN} ${MARK.restored} font-medium text-emerald-950`;
     default:
       return "";
   }
@@ -20,10 +33,10 @@ function classFor(seg: Segment): string {
 
 function titleFor(seg: Segment): string | undefined {
   const e = seg.entity;
-  if (!e) return seg.kind === "placeholder" ? "Placeholder" : undefined;
+  if (!e) return seg.kind === "redacted" ? "Redacted — never restored" : seg.kind ? "Placeholder" : undefined;
   switch (seg.kind) {
     case "original":
-      return `${e.type} → ${e.replacement} (${e.source === "gemma" ? "caught by Gemma" : "caught by rule"})`;
+      return `${e.type} → ${e.replacement} (${e.source === "gemma" ? "caught by Gemma" : "caught by a rule"})`;
     case "redacted":
       return `${e.type} — redacted, never restored`;
     case "restored":
@@ -45,10 +58,10 @@ export function HighlightedText({
   className?: string;
 }) {
   return (
-    <p className={`whitespace-pre-wrap break-words leading-relaxed ${className}`}>
+    <p className={`whitespace-pre-wrap break-words ${className}`}>
       {segment(text, entities, mode).map((seg, i) =>
         seg.kind ? (
-          <mark key={i} title={titleFor(seg)} className={`rounded px-0.5 ${classFor(seg)}`}>
+          <mark key={i} title={titleFor(seg)} className={`box-decoration-clone ${classFor(seg)}`}>
             {seg.text}
           </mark>
         ) : (

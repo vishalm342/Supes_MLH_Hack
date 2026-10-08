@@ -1,19 +1,76 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", monospace;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Cal Sans", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  --color-paper: #fafaf9;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
-  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgb(139 92 246 / 0.12), transparent);
+  @apply bg-paper font-sans text-stone-900 antialiased;
+  /* Cal Sans ships a single weight; never fake-bold it. */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
-mark {
-  color: inherit;
+::selection {
+  background: #0c0a09;
+  color: #fafaf9;
+}
+
+/* In the base layer so Tailwind's bg-* utilities on <mark> still win. */
+@layer base {
+  mark {
+    color: inherit;
+    background: none;
+  }
+}
+
+/* Soft band sweeping down the private text while the local scan runs. */
+@keyframes scan-sweep {
+  from {
+    transform: translateY(-120%);
+  }
+  to {
+    transform: translateY(420%);
+  }
+}
+
+.scan-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-sweep::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 28%;
+  background: linear-gradient(to bottom, transparent, rgb(37 99 235 / 0.09), transparent);
+  animation: scan-sweep 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes typing {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.typing-dot {
+  animation: typing 1.2s ease-in-out infinite;
 }
