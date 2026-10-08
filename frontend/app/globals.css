@@ -10,10 +10,58 @@ html {
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
-  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgb(139 92 246 / 0.12), transparent);
+  @apply bg-[#07090f] text-slate-100 antialiased;
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgb(139 92 246 / 0.16), transparent 70%),
+    radial-gradient(rgb(148 163 184 / 0.07) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    22px 22px;
 }
 
 mark {
   color: inherit;
+}
+
+/* Light band sweeping down the private text while the local scan runs. */
+@keyframes scan-sweep {
+  from {
+    transform: translateY(-120%);
+  }
+  to {
+    transform: translateY(420%);
+  }
+}
+
+.scan-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-sweep::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 28%;
+  background: linear-gradient(to bottom, transparent, rgb(167 139 250 / 0.28), transparent);
+  animation: scan-sweep 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes typing {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.typing-dot {
+  animation: typing 1.2s ease-in-out infinite;
 }
