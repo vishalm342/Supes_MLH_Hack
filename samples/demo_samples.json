@@ -1,0 +1,22 @@
+[
+  {
+    "id": "customer-context",
+    "title": "Customer escalation",
+    "text": "The Henderson account is about to churn. Their CFO Priya (priya.r@henderson-logistics.com, +91 98400 12345) says the 40L renewal is off unless Project Falcon ships. Staging is at http://10.20.4.15:8080 and the key is sk_live_51HxQe9kLmN3pQrStUvWxYz. Draft a reply to Priya that keeps the account."
+  },
+  {
+    "id": "secrets",
+    "title": "Leaked secrets",
+    "text": "Our fake deployment notes contain password=Maple!River!2042, API key ak_test_7QpLm2Rs9Tv4, and the service at 192.0.2.44 is failing. The owner is Mateo from Northstar. Summarise the exposure and suggest safe rotation steps."
+  },
+  {
+    "id": "medical",
+    "title": "Patient report",
+    "text": "Dr. Anika Rao recorded that the fictional patient Leena has diabetes and a severe peanut allergy. Contact her at leena@example.test or +1 202 555 0188 if the appointment changes. Summarise the report for the care team."
+  },
+  {
+    "id": "internal-infra",
+    "title": "Production outage",
+    "text": "Production is down for Project Nimbus after host 198.51.100.27 rejected deploys. The temporary admin password is Quasar#8841 and the on-call engineer is Ibrahim. Debug the incident and draft an update for leadership."
+  }
+]
