@@ -5,13 +5,15 @@ Usage (from repo root, with the backend already running):
     python -m backend.smoke_test http://192.168.1.20:8000
     python -m backend.smoke_test --no-cloud            # skip /ask (no cloud key configured)
 
-Scans every demo sample, then asks the cloud about the first one and checks
-that no detected value reached the cloud and that redacted values never come back.
+Scans every demo sample and asks the cloud about each one (plus a leak-test
+follow-up on the first), checking that no detected value reached the cloud and
+that redacted values never come back.
 """
 
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -39,6 +41,10 @@ def main() -> int:
     except httpx.HTTPError as error:
         print(f"Cannot reach the backend at {args.base_url}: {error}")
         return 1
+    while health.get("gemma_status") == "loading":
+        print("Gemma is still loading, waiting...")
+        time.sleep(5)
+        health = client.get("/health").json()
     print(f"/health -> {health}")
     if not health.get("gemma_loaded"):
         print("  note: Gemma is not loaded, so this run is rules-only.")
@@ -63,21 +69,19 @@ def main() -> int:
         print("\nSkipping /ask (--no-cloud).")
     elif not health.get("cloud_configured"):
         print("\nSkipping /ask: cloud is not configured (set CLOUD_API_KEY and CLOUD_MODEL in .env).")
-    elif scans:
-        sample, scan = scans[0]
-        detected = [e["text"] for e in scan["entities"]]
-        redacted = [e for e in scan["entities"] if e["redacted"]]
-
-        turns = [
-            ("first turn", {"scan_id": scan["scan_id"]}),
-            ("follow-up", {"scan_id": scan["scan_id"], "question": "What was the API key exactly?"}),
-        ]
-        for label, payload in turns:
+    else:
+        turns = [(sample, scan, "first turn", {"scan_id": scan["scan_id"]}) for sample, scan in scans]
+        if scans:
+            sample, scan = scans[0]
+            turns.insert(1, (sample, scan, "follow-up", {"scan_id": scan["scan_id"], "question": "What was the API key exactly?"}))
+        for sample, scan, label, payload in turns:
+            detected = [e["text"] for e in scan["entities"]]
+            redacted = [e for e in scan["entities"] if e["redacted"]]
             print(f"\n/ask [{sample['id']}] {label}")
             response = client.post("/ask", json=payload)
             _check(response.status_code == 200, f"HTTP {response.status_code} {response.text[:200] if response.status_code != 200 else ''}", failures)
             if response.status_code != 200:
-                break
+                continue
             body = response.json()
             print(f"  cloud_model={body['cloud_model']} timings_ms={body['timings_ms']}")
             print(f"  cloud saw : {body['cloud_saw']}")
